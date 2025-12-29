@@ -88,7 +88,7 @@ export default function ProductOptions({
                 <div>
                   <p className="font-medium text-charcoal">{frame.name}</p>
                   <p className="text-sm text-brand-500 mt-0.5">
-                    {frame.price === 0 ? "Included" : `+${formatPrice(frame.price)}`}
+                    {frame.price === 0 ? "" : `+${formatPrice(frame.price)}`}
                   </p>
                 </div>
 

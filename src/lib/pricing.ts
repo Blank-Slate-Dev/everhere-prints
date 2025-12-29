@@ -6,24 +6,24 @@ export const priceConfig: PriceConfig = {
     A4: {
       name: "A4",
       dimensions: "21 × 29.7 cm",
-      price: 3900, // £39.00 in pence
+      price: 5900, // $59.00 in cents
     },
     A3: {
       name: "A3",
       dimensions: "29.7 × 42 cm",
-      price: 5900, // £59.00 in pence
+      price: 7900, // $79.00 in cents
     },
     A2: {
       name: "A2",
       dimensions: "42 × 59.4 cm",
-      price: 7900, // £79.00 in pence
+      price: 9900, // $99.00 in cents
     },
   },
   frames: [
     { id: "none", name: "No Frame", price: 0 },
-    { id: "black", name: "Black Frame", price: 2500 }, // £25.00
-    { id: "white", name: "White Frame", price: 2500 }, // £25.00
-    { id: "oak", name: "Oak Frame", price: 3500 }, // £35.00
+    { id: "black", name: "Black Frame", price: 3500 }, // $35.00
+    { id: "white", name: "White Frame", price: 3500 }, // $35.00
+    { id: "oak", name: "Oak Frame", price: 4500 }, // $45.00
   ],
 };
 
@@ -33,8 +33,8 @@ export function calculateTotal(size: PrintSize, frame: FrameOption): number {
   return sizePrice + framePrice;
 }
 
-export function formatPrice(priceInPence: number): string {
-  return `£${(priceInPence / 100).toFixed(2)}`;
+export function formatPrice(priceInCents: number): string {
+  return `$${(priceInCents / 100).toFixed(2)}`;
 }
 
 export function getSizeDetails(size: PrintSize) {

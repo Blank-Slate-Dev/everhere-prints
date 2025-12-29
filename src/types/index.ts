@@ -3,7 +3,6 @@ export interface MapLocation {
   longitude: number;
   latitude: number;
   placeName: string;
-  zoom: number;
 }
 
 export type MapStyle = "minimal" | "night" | "satellite";
@@ -14,6 +13,7 @@ export interface PrintCustomization {
   date: string;
   location: MapLocation | null;
   style: MapStyle;
+  zoom: number;
 }
 
 export type PrintSize = "A4" | "A3" | "A2";

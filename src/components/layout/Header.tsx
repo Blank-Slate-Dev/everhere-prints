@@ -49,7 +49,7 @@ export default function Header() {
               />
               <div className="flex items-center gap-1.5 mt-1">
                 <MapPin size={12} className="text-charcoal" />
-                <span className="text-xs font-medium text-charcoal tracking-wide">
+                <span className="text-xs font-serif font-medium text-charcoal tracking-wide">
                   Here, forever.
                 </span>
               </div>

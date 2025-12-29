@@ -1,15 +1,18 @@
+// src/app/create/page.tsx
 "use client";
 
-import { useState, useCallback } from "react";
-import { motion } from "framer-motion";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { MapLocation, MapStyle, PrintSize, FrameOption, PrintCustomization, ProductSelection } from "@/types";
 import { priceConfig, calculateTotal } from "@/lib/pricing";
 import LocationSearch from "@/components/create/LocationSearch";
 import PrintPreview from "@/components/create/PrintPreview";
 import StyleSelector from "@/components/create/StyleSelector";
+import ZoomSelector from "@/components/create/ZoomSelector";
 import TextEditor from "@/components/create/TextEditor";
 import ProductOptions from "@/components/create/ProductOptions";
 import OrderSummary from "@/components/create/OrderSummary";
+import MiniPreview from "@/components/create/MiniPreview";
 
 export default function CreatePage() {
   // Customization state
@@ -19,6 +22,7 @@ export default function CreatePage() {
     date: "",
     location: null,
     style: "minimal",
+    zoom: 12,
   });
 
   // Product selection state
@@ -28,6 +32,43 @@ export default function CreatePage() {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [showMiniPreview, setShowMiniPreview] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  // Track scroll position to show/hide mini preview on mobile
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!previewRef.current) return;
+      
+      const previewRect = previewRef.current.getBoundingClientRect();
+      const previewCenter = previewRect.top + previewRect.height / 2;
+      const viewportCenter = window.innerHeight / 2;
+      
+      // Show mini preview when main preview center is above viewport
+      setShowMiniPreview(previewCenter < -50);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Scroll to center the preview in viewport
+  const scrollToPreview = () => {
+    if (!previewRef.current) return;
+    
+    const previewRect = previewRef.current.getBoundingClientRect();
+    const previewHeight = previewRect.height;
+    const viewportHeight = window.innerHeight;
+    const previewTop = previewRect.top + window.scrollY;
+    
+    // Calculate scroll position to center the preview
+    const scrollTarget = previewTop - (viewportHeight / 2) + (previewHeight / 2);
+    
+    window.scrollTo({
+      top: Math.max(0, scrollTarget),
+      behavior: "smooth",
+    });
+  };
 
   // Handlers
   const handleLocationSelect = useCallback((location: MapLocation) => {
@@ -36,6 +77,10 @@ export default function CreatePage() {
 
   const handleStyleChange = useCallback((style: MapStyle) => {
     setCustomization((prev) => ({ ...prev, style }));
+  }, []);
+
+  const handleZoomChange = useCallback((zoom: number) => {
+    setCustomization((prev) => ({ ...prev, zoom }));
   }, []);
 
   const handleTitleChange = useCallback((title: string) => {
@@ -99,6 +144,17 @@ export default function CreatePage() {
 
   return (
     <div className="min-h-screen pt-20 lg:pt-24 bg-cream">
+      {/* Mobile Sticky Mini Preview */}
+      <AnimatePresence>
+        {showMiniPreview && (
+          <MiniPreview
+            customization={customization}
+            product={product}
+            onTap={scrollToPreview}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         {/* Page Header */}
         <motion.div
@@ -119,12 +175,13 @@ export default function CreatePage() {
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
           {/* Left Column - Preview */}
           <motion.div
+            ref={previewRef}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
             className="lg:sticky lg:top-28"
           >
-            <PrintPreview customization={customization} />
+            <PrintPreview customization={customization} product={product} />
           </motion.div>
 
           {/* Right Column - Controls */}
@@ -142,15 +199,21 @@ export default function CreatePage() {
               <LocationSearch onLocationSelect={handleLocationSelect} />
             </div>
 
-            {/* Map Style */}
+            {/* Map Style & Zoom */}
             <div className="bg-white rounded-2xl p-6 border border-brand-100 shadow-sm">
               <h2 className="text-lg font-semibold text-charcoal mb-4">
                 2. Choose Your Style
               </h2>
-              <StyleSelector
-                selectedStyle={customization.style}
-                onStyleChange={handleStyleChange}
-              />
+              <div className="space-y-6">
+                <StyleSelector
+                  selectedStyle={customization.style}
+                  onStyleChange={handleStyleChange}
+                />
+                <ZoomSelector
+                  selectedZoom={customization.zoom}
+                  onZoomChange={handleZoomChange}
+                />
+              </div>
             </div>
 
             {/* Text Customization */}

@@ -1,3 +1,4 @@
+// src/app/api/checkout/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { PrintCustomization, ProductSelection } from "@/types";
@@ -39,12 +40,12 @@ export async function POST(request: NextRequest) {
       mode: "payment",
       billing_address_collection: "required",
       shipping_address_collection: {
-        allowed_countries: ["GB", "US", "CA", "AU", "NZ", "IE", "DE", "FR", "ES", "IT", "NL"],
+        allowed_countries: ["AU", "NZ"],
       },
       line_items: [
         {
           price_data: {
-            currency: "gbp",
+            currency: "aud",
             product_data: {
               name: "EverHere Prints - Custom Map Print",
               description: productDescription,
@@ -53,6 +54,7 @@ export async function POST(request: NextRequest) {
                 location_name: customization.location.placeName,
                 latitude: customization.location.latitude.toString(),
                 longitude: customization.location.longitude.toString(),
+                zoom: customization.zoom.toString(),
                 style: customization.style,
                 title: customization.title,
                 subtitle: customization.subtitle,
@@ -70,6 +72,7 @@ export async function POST(request: NextRequest) {
         location_name: customization.location.placeName,
         latitude: customization.location.latitude.toString(),
         longitude: customization.location.longitude.toString(),
+        zoom: customization.zoom.toString(),
         style: customization.style,
         title: customization.title,
         subtitle: customization.subtitle,

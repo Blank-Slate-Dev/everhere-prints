@@ -30,17 +30,18 @@ export default function LocationSearch({
       types: "place,locality,neighborhood,address,poi",
       placeholder: "Search for a location...",
       limit: 5,
+      countries: "au,nz",
     });
 
     geocoder.addTo(geocoderContainerRef.current);
 
     geocoder.on("result", (e) => {
       const { center, place_name } = e.result;
+      
       onLocationSelect({
         longitude: center[0],
         latitude: center[1],
         placeName: place_name,
-        zoom: 14,
       });
     });
 
@@ -60,7 +61,7 @@ export default function LocationSearch({
       </label>
       <div ref={geocoderContainerRef} className="geocoder-container" />
       <p className="mt-2 text-xs text-brand-500">
-        Search for any address, landmark, or city
+        Search for any address, landmark, or city in Australia or New Zealand
       </p>
     </div>
   );
