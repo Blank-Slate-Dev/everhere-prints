@@ -18,7 +18,7 @@ export default function AustraliaMiniPreview({
   product,
   onTap,
 }: AustraliaMiniPreviewProps) {
-  const { title, subtitle, date, location, colorId } = customization;
+  const { location, colorId } = customization;
   const { frame } = product;
 
   const colorConfig = getAustraliaMapColor(colorId);
@@ -74,54 +74,90 @@ export default function AustraliaMiniPreview({
         onClick={onTap}
         className="w-full bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-brand-200 p-4 flex items-center gap-4 active:scale-[0.98] transition-transform"
       >
-        {/* Live mini preview - uses square aspect for proper pin positioning */}
+        {/* Live mini preview - A-series aspect ratio */}
         <div
           className="relative flex-shrink-0 overflow-hidden"
           style={{
             width: "80px",
-            height: "80px", // Square to match calibration
-            borderRadius: hasFrame ? "1px" : "0px",
+            height: "113px", // A-series ratio (80 * √2)
+            borderRadius: hasFrame ? "2px" : "1px",
             background: currentFrame.background,
             padding: currentFrame.padding,
             boxShadow: "2px 4px 12px rgba(0,0,0,0.2)",
           }}
         >
           {/* Inner white mat */}
-          <div
-            className="w-full h-full bg-white"
-            style={{
-              padding: hasFrame ? "2px" : "2px",
-            }}
-          >
-            {/* Square map container - matches calibration tool */}
-            <div className="relative w-full h-full overflow-hidden bg-white">
-              {/* Watercolor map */}
-              <Image
-                src={colorConfig.image}
-                alt={colorConfig.name}
-                fill
-                className="object-contain"
-                sizes="80px"
-              />
+          <div className="w-full h-full bg-white flex flex-col">
+            {/* Map area - 72% */}
+            <div className="flex-[72] flex items-center justify-center overflow-hidden">
+              {/* Square map container */}
+              <div className="relative w-[94%] aspect-square">
+                <Image
+                  src={colorConfig.image}
+                  alt={colorConfig.name}
+                  fill
+                  className="object-contain"
+                  sizes="75px"
+                />
 
-              {/* Pin - positioned relative to square container */}
-              {pinPosition && pinPosition.isValid && (
-                <div
-                  className="absolute z-10"
-                  style={{
-                    left: `${pinPosition.x}%`,
-                    top: `${pinPosition.y}%`,
-                    transform: "translate(-50%, -100%)",
+                {/* Pin */}
+                {pinPosition && pinPosition.isValid && (
+                  <div
+                    className="absolute z-10"
+                    style={{
+                      left: `${pinPosition.x}%`,
+                      top: `${pinPosition.y}%`,
+                    }}
+                  >
+                    <MapPin
+                      size={10}
+                      style={{
+                        color: colorConfig.pinColor,
+                        fill: colorConfig.pinColor,
+                        transform: "translate(-50%, -100%)",
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Text area - 28% */}
+            <div className="flex-[28] flex flex-col items-center justify-center px-1 pb-0.5">
+              {/* Title */}
+              <p 
+                className="uppercase leading-tight truncate text-center w-full"
+                style={{ 
+                  color: colorConfig.accentColor,
+                  fontSize: "3px",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                {customization.title || "Our Special Place"}
+              </p>
+              {/* Location */}
+              <p 
+                className="font-serif leading-tight truncate text-center w-full"
+                style={{ 
+                  color: colorConfig.textColor,
+                  fontSize: "5px",
+                }}
+              >
+                {location ? formatLocationName(location.placeName).split(",")[0] : "Location"}
+              </p>
+              {/* Subtitle & Date */}
+              {(customization.subtitle || customization.date) && (
+                <p 
+                  className="leading-tight truncate text-center w-full"
+                  style={{ 
+                    color: colorConfig.accentColor,
+                    fontSize: "4px",
                   }}
                 >
-                  <MapPin
-                    size={10}
-                    style={{
-                      color: colorConfig.pinColor,
-                      fill: colorConfig.pinColor,
-                    }}
-                  />
-                </div>
+                  {customization.subtitle}
+                  {customization.subtitle && customization.date && " • "}
+                  {customization.date}
+                </p>
               )}
             </div>
           </div>
@@ -129,10 +165,10 @@ export default function AustraliaMiniPreview({
 
         {/* Info text */}
         <div className="flex-1 text-left min-w-0">
-          <p className="text-base font-semibold text-charcoal">
-            Your Print Preview
+          <p className="text-sm font-medium text-brand-500 truncate">
+            {customization.title || "Our Special Place"}
           </p>
-          <p className="text-sm text-brand-600 mt-1 truncate">
+          <p className="text-base font-semibold text-charcoal truncate">
             {location
               ? formatLocationName(location.placeName)
               : "No location selected"}

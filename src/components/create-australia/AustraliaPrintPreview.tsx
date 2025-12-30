@@ -18,7 +18,7 @@ export default function AustraliaPrintPreview({
   product,
 }: AustraliaPrintPreviewProps) {
   const { title, subtitle, date, location, colorId } = customization;
-  const { frame } = product;
+  const { frame, size } = product;
 
   const colorConfig = getAustraliaMapColor(colorId);
   const hasFrame = frame.id !== "none";
@@ -81,6 +81,10 @@ export default function AustraliaPrintPreview({
   };
 
   const config = frameConfig[frame.id as keyof typeof frameConfig];
+
+  // A-series paper ratio: 1:√2 ≈ 1:1.4142 (width:height in portrait)
+  // Using exact ratio for accuracy
+  const paperAspectRatio = 1 / Math.sqrt(2); // ≈ 0.7071 (width/height)
 
   return (
     <motion.div
@@ -177,7 +181,7 @@ export default function AustraliaPrintPreview({
             />
           )}
 
-          {/* White mat/paper */}
+          {/* White mat/paper - A-series aspect ratio */}
           <div
             className="relative bg-white"
             style={{
@@ -199,107 +203,126 @@ export default function AustraliaPrintPreview({
               />
             )}
 
-            {/* Print Content Area */}
-            <div className="bg-white">
-              {/* 
-                CRITICAL: This is the EXACT same structure as the calibration tool
-                - aspect-square container
-                - Image with fill + object-contain
-                - Pin positioned with percentages
-              */}
-              <div className="relative aspect-square w-full">
-                {/* Map Image */}
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={colorId}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.4 }}
-                    className="absolute inset-0"
-                  >
-                    <Image
-                      src={colorConfig.image}
-                      alt={`Australia Map - ${colorConfig.name}`}
-                      fill
-                      className="object-contain"
-                      priority
-                    />
-                  </motion.div>
-                </AnimatePresence>
-
-                {/* Location Pin - EXACT same positioning as calibration tool */}
-                <AnimatePresence>
-                  {showPin && pinPosition && pinPosition.isValid && (
+            {/* Print Content Area - A-series aspect ratio (portrait) */}
+            <div 
+              className="relative w-full bg-white overflow-hidden"
+              style={{ aspectRatio: `${paperAspectRatio}` }}
+            >
+              {/* Map Area - takes up ~78% of height */}
+              <div 
+                className="absolute inset-x-0 top-0 flex items-center justify-center"
+                style={{ height: "78%" }}
+              >
+                {/* Square container for map - constrained to fit */}
+                <div 
+                  className="relative w-full"
+                  style={{ aspectRatio: "1/1", maxHeight: "100%" }}
+                >
+                  {/* Map Image */}
+                  <AnimatePresence mode="wait">
                     <motion.div
-                      initial={{ y: -100, opacity: 0, scale: 0.5 }}
-                      animate={{ y: 0, opacity: 1, scale: 1 }}
-                      exit={{ y: -50, opacity: 0, scale: 0.5 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 300,
-                        damping: 20,
-                        duration: 0.6,
-                      }}
-                      className="absolute z-10"
-                      style={{
-                        left: `${pinPosition.x}%`,
-                        top: `${pinPosition.y}%`,
-                        transform: "translate(-50%, -100%)",
-                      }}
+                      key={colorId}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="absolute inset-0"
                     >
-                      {/* Pin Shadow */}
-                      <div
-                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-1 rounded-full opacity-30"
-                        style={{ backgroundColor: colorConfig.pinColor }}
-                      />
-                      {/* Pin Icon */}
-                      <MapPin
-                        size={28}
-                        className="drop-shadow-lg"
-                        style={{
-                          color: colorConfig.pinColor,
-                          fill: colorConfig.pinColor,
-                        }}
-                      />
-                      {/* Pulse Effect */}
-                      <motion.div
-                        initial={{ scale: 1, opacity: 0.6 }}
-                        animate={{ scale: 2, opacity: 0 }}
-                        transition={{
-                          duration: 1.5,
-                          repeat: Infinity,
-                          ease: "easeOut",
-                        }}
-                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full"
-                        style={{ backgroundColor: colorConfig.pinColor }}
+                      <Image
+                        src={colorConfig.image}
+                        alt={`Australia Map - ${colorConfig.name}`}
+                        fill
+                        className="object-contain"
+                        priority
                       />
                     </motion.div>
-                  )}
-                </AnimatePresence>
+                  </AnimatePresence>
 
-                {/* Coordinates - Top Left corner */}
-                {location && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="absolute top-3 left-3 text-[8px] md:text-[10px] font-mono pointer-events-none z-20"
-                    style={{ color: colorConfig.accentColor, opacity: 0.7 }}
-                  >
-                    {Math.abs(location.latitude).toFixed(4)}°S,{" "}
-                    {location.longitude.toFixed(4)}°E
-                  </motion.div>
-                )}
+                  {/* Location Pin */}
+                  <AnimatePresence>
+                    {showPin && pinPosition && pinPosition.isValid && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute z-10"
+                        style={{
+                          left: `${pinPosition.x}%`,
+                          top: `${pinPosition.y}%`,
+                        }}
+                      >
+                        {/* Pin wrapper - offset so pin tip is at the position */}
+                        <motion.div
+                          initial={{ y: -50, scale: 0.5 }}
+                          animate={{ y: 0, scale: 1 }}
+                          exit={{ y: -30, scale: 0.5 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 20,
+                          }}
+                          style={{
+                            position: "absolute",
+                            left: "-14px",
+                            top: "-28px",
+                          }}
+                        >
+                          {/* Pin Icon */}
+                          <MapPin
+                            size={28}
+                            className="drop-shadow-lg"
+                            style={{
+                              color: colorConfig.pinColor,
+                              fill: colorConfig.pinColor,
+                            }}
+                          />
+                        </motion.div>
+                        {/* Pulse Effect at pin point */}
+                        <motion.div
+                          initial={{ scale: 0.5, opacity: 0.6 }}
+                          animate={{ scale: 2.5, opacity: 0 }}
+                          transition={{
+                            duration: 1.5,
+                            repeat: Infinity,
+                            ease: "easeOut",
+                          }}
+                          className="absolute w-2 h-2 rounded-full"
+                          style={{ 
+                            backgroundColor: colorConfig.pinColor,
+                            left: "-4px",
+                            top: "-4px",
+                          }}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Coordinates - Top Left corner */}
+                  {location && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="absolute top-2 left-2 text-[8px] md:text-[9px] font-mono pointer-events-none z-20"
+                      style={{ color: colorConfig.accentColor, opacity: 0.7 }}
+                    >
+                      {Math.abs(location.latitude).toFixed(4)}°S,{" "}
+                      {location.longitude.toFixed(4)}°E
+                    </motion.div>
+                  )}
+                </div>
               </div>
 
-              {/* Text Content - Below the map */}
-              <div className="pt-4 pb-2 text-center">
+              {/* Text Content - Bottom 22% */}
+              <div 
+                className="absolute inset-x-0 bottom-0 flex flex-col items-center justify-center text-center px-4"
+                style={{ height: "22%" }}
+              >
                 {/* Title */}
                 <motion.p
                   key={title}
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="text-[10px] md:text-xs uppercase tracking-[0.25em] mb-1"
+                  className="text-[9px] md:text-[11px] uppercase tracking-[0.2em] mb-1"
                   style={{ color: colorConfig.accentColor }}
                 >
                   {title || "Our Special Place"}
@@ -310,7 +333,7 @@ export default function AustraliaPrintPreview({
                   key={location?.placeName || "placeholder"}
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="font-serif text-lg md:text-xl lg:text-2xl"
+                  className="font-serif text-base md:text-lg lg:text-xl leading-tight"
                   style={{ color: colorConfig.textColor }}
                 >
                   {location ? formatLocationName(location.placeName) : "Your Location"}
@@ -322,7 +345,7 @@ export default function AustraliaPrintPreview({
                     key={`${subtitle}-${date}`}
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-xs md:text-sm mt-1"
+                    className="text-[10px] md:text-xs mt-1"
                     style={{ color: colorConfig.accentColor }}
                   >
                     {subtitle}
@@ -336,14 +359,14 @@ export default function AustraliaPrintPreview({
         </motion.div>
       </div>
 
-      {/* Live Preview Badge */}
+      {/* Size indicator badge */}
       <motion.div
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.3 }}
         className="absolute -right-2 top-8 md:-right-4 md:top-12 bg-charcoal text-white text-xs px-3 py-1.5 rounded-full shadow-lg z-10"
       >
-        Live Preview
+        {size} Preview
       </motion.div>
     </motion.div>
   );

@@ -1,9 +1,9 @@
 // src/app/calibrate/page.tsx
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import Image from "next/image";
-import { MapPin, Copy, Check, RotateCcw } from "lucide-react";
+import { MapPin, Copy, Check, RotateCcw, CheckCircle } from "lucide-react";
 import {
   australiaMapColors,
   getAustraliaMapColor,
@@ -14,18 +14,15 @@ const GEO_BOUNDS = {
   west: 113.15,
   east: 153.64,
   north: -10.68,
-  south: -43.64, // Extended south for Tasmania
+  south: -43.64,
 };
 
-// All calibration points - ALL are draggable
+// All calibration points
 const calibrationPoints = [
-  // Extreme points (for bounds calculation)
   { id: "steepPoint", name: "Steep Point (West)", lat: -26.15, lng: 113.15, color: "#DC2626", isExtreme: true },
   { id: "capeByron", name: "Cape Byron (East)", lat: -28.64, lng: 153.64, color: "#16A34A", isExtreme: true },
   { id: "capeYork", name: "Cape York (North)", lat: -10.68, lng: 142.53, color: "#EA580C", isExtreme: true },
   { id: "hobart", name: "Hobart (Tasmania)", lat: -42.88, lng: 147.33, color: "#7C3AED", isExtreme: true },
-  
-  // Major cities
   { id: "perth", name: "Perth", lat: -31.95, lng: 115.86, color: "#EF4444", isExtreme: false },
   { id: "darwin", name: "Darwin", lat: -12.46, lng: 130.85, color: "#F59E0B", isExtreme: false },
   { id: "brisbane", name: "Brisbane", lat: -27.47, lng: 153.03, color: "#10B981", isExtreme: false },
@@ -36,14 +33,12 @@ const calibrationPoints = [
   { id: "alice", name: "Alice Springs", lat: -23.70, lng: 133.88, color: "#F97316", isExtreme: false },
 ];
 
-// Default starting positions for pins (percentage) - rough estimates
+// Default starting positions
 const defaultPinPositions: Record<string, { x: number; y: number }> = {
-  // Extreme points
   steepPoint: { x: 5, y: 48 },
   capeByron: { x: 95, y: 52 },
   capeYork: { x: 68, y: 5 },
   hobart: { x: 78, y: 92 },
-  // Major cities
   perth: { x: 12, y: 58 },
   darwin: { x: 42, y: 12 },
   brisbane: { x: 92, y: 45 },
@@ -54,11 +49,15 @@ const defaultPinPositions: Record<string, { x: number; y: number }> = {
   alice: { x: 48, y: 42 },
 };
 
+type PinPositions = Record<string, { x: number; y: number }>;
+type AllColorPositions = Record<string, PinPositions>;
+
+const STORAGE_KEY = "australia-map-calibration-v2";
+
 export default function CalibratePage() {
   const [selectedColorId, setSelectedColorId] = useState("blue");
-  const [pinPositions, setPinPositions] = useState<Record<string, { x: number; y: number }>>(
-    () => ({ ...defaultPinPositions })
-  );
+  const [allColorPositions, setAllColorPositions] = useState<AllColorPositions>({});
+  const [calibratedColors, setCalibratedColors] = useState<Set<string>>(new Set());
   const [yOffset, setYOffset] = useState(0);
   const [draggingPin, setDraggingPin] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -67,12 +66,53 @@ export default function CalibratePage() {
 
   const colorConfig = getAustraliaMapColor(selectedColorId);
 
+  // Load saved positions from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setAllColorPositions(parsed.positions || {});
+        setCalibratedColors(new Set(parsed.calibrated || []));
+        setYOffset(parsed.yOffset || 0);
+      } catch (e) {
+        console.error("Failed to load saved calibration:", e);
+      }
+    }
+  }, []);
+
+  // Save to localStorage whenever positions change
+  useEffect(() => {
+    const data = {
+      positions: allColorPositions,
+      calibrated: Array.from(calibratedColors),
+      yOffset,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }, [allColorPositions, calibratedColors, yOffset]);
+
+  // Get pin positions for current color (or defaults)
+  const currentPinPositions = allColorPositions[selectedColorId] || { ...defaultPinPositions };
+
+  // Update positions for current color
+  const updateCurrentPositions = (newPositions: PinPositions) => {
+    setAllColorPositions(prev => ({
+      ...prev,
+      [selectedColorId]: newPositions,
+    }));
+  };
+
+  // Mark current color as calibrated
+  const markAsCalibrated = () => {
+    setCalibratedColors(prev => new Set([...prev, selectedColorId]));
+  };
+
   // Calculate bounds from extreme points
-  const calculateBounds = useCallback(() => {
-    const steepPoint = pinPositions.steepPoint;
-    const capeByron = pinPositions.capeByron;
-    const capeYork = pinPositions.capeYork;
-    const hobart = pinPositions.hobart;
+  const calculateBounds = useCallback((positions: PinPositions) => {
+    const steepPoint = positions.steepPoint || defaultPinPositions.steepPoint;
+    const capeByron = positions.capeByron || defaultPinPositions.capeByron;
+    const capeYork = positions.capeYork || defaultPinPositions.capeYork;
+    const hobart = positions.hobart || defaultPinPositions.hobart;
 
     const steepPointRelX = (calibrationPoints[0].lng - GEO_BOUNDS.west) / (GEO_BOUNDS.east - GEO_BOUNDS.west);
     const capeByronRelX = (calibrationPoints[1].lng - GEO_BOUNDS.west) / (GEO_BOUNDS.east - GEO_BOUNDS.west);
@@ -93,18 +133,16 @@ export default function CalibratePage() {
       top: Math.round(top * 10) / 10,
       bottom: Math.round(bottom * 10) / 10,
     };
-  }, [pinPositions]);
+  }, []);
 
-  const bounds = calculateBounds();
+  const bounds = calculateBounds(currentPinPositions);
 
-  // Handle drag start - immediately snap pin tip to cursor
+  // Handle drag
   const handleDragStart = (pinId: string, clientX: number, clientY: number) => {
     setDraggingPin(pinId);
-    // Immediately update position so pin tip is at cursor
     updatePinPosition(pinId, clientX, clientY);
   };
 
-  // Update pin position - pin TIP will be exactly at cursor position
   const updatePinPosition = (pinId: string, clientX: number, clientY: number) => {
     if (!containerRef.current) return;
 
@@ -112,13 +150,13 @@ export default function CalibratePage() {
     const x = ((clientX - rect.left) / rect.width) * 100;
     const y = ((clientY - rect.top) / rect.height) * 100;
 
-    setPinPositions((prev) => ({
-      ...prev,
+    updateCurrentPositions({
+      ...currentPinPositions,
       [pinId]: {
         x: Math.max(0, Math.min(100, x)),
         y: Math.max(0, Math.min(100, y)),
       },
-    }));
+    });
   };
 
   const handleDragMove = useCallback(
@@ -126,7 +164,7 @@ export default function CalibratePage() {
       if (!draggingPin) return;
       updatePinPosition(draggingPin, clientX, clientY);
     },
-    [draggingPin]
+    [draggingPin, currentPinPositions]
   );
 
   const handleDragEnd = () => {
@@ -154,64 +192,139 @@ export default function CalibratePage() {
     }
   };
 
-  const resetPins = () => {
-    setPinPositions({ ...defaultPinPositions });
-    setYOffset(0);
+  const resetCurrentColor = () => {
+    updateCurrentPositions({ ...defaultPinPositions });
+    setCalibratedColors(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(selectedColorId);
+      return newSet;
+    });
   };
 
-  const copyConfig = () => {
-    const configText = `${selectedColorId}: { left: ${bounds.left}, right: ${bounds.right}, top: ${bounds.top}, bottom: ${bounds.bottom} },`;
-    navigator.clipboard.writeText(configText);
+  const resetAll = () => {
+    setAllColorPositions({});
+    setCalibratedColors(new Set());
+    setYOffset(0);
+    localStorage.removeItem(STORAGE_KEY);
+  };
+
+  // Generate config for current color with ALL pin positions
+  const generateCurrentConfig = () => {
+    const positions = currentPinPositions;
+    const b = bounds;
+    
+    const pinLines = calibrationPoints.map(point => {
+      const pos = positions[point.id] || defaultPinPositions[point.id];
+      return `      ${point.id}: { x: ${pos.x.toFixed(1)}, y: ${pos.y.toFixed(1)} }, // ${point.name}`;
+    }).join('\n');
+
+    return `  ${selectedColorId}: {
+    bounds: { left: ${b.left}, right: ${b.right}, top: ${b.top}, bottom: ${b.bottom} },
+    pins: {
+${pinLines}
+    },
+  },`;
+  };
+
+  const copyCurrentConfig = () => {
+    navigator.clipboard.writeText(generateCurrentConfig());
+    markAsCalibrated();
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Generate full config for all calibrated maps
+  const generateAllConfig = () => {
+    const mapConfigs: string[] = [];
+    
+    australiaMapColors.forEach(color => {
+      const positions = allColorPositions[color.id];
+      if (positions) {
+        const b = calculateBounds(positions);
+        
+        const pinLines = calibrationPoints.map(point => {
+          const pos = positions[point.id] || defaultPinPositions[point.id];
+          return `      ${point.id}: { x: ${pos.x.toFixed(1)}, y: ${pos.y.toFixed(1)} },`;
+        }).join('\n');
+
+        mapConfigs.push(`  ${color.id}: {
+    bounds: { left: ${b.left}, right: ${b.right}, top: ${b.top}, bottom: ${b.bottom} },
+    pins: {
+${pinLines}
+    },
+  },`);
+      }
+    });
+
+    return `// Australia Map Calibration Data
+// Generated from calibration tool
+
+const Y_OFFSET = ${yOffset};
+
+const mapCalibrationData = {
+${mapConfigs.join('\n')}
+};
+
+export default mapCalibrationData;`;
   };
 
   const copyAllConfig = () => {
-    const allBounds = australiaMapColors.map(color => 
-      `  ${color.id}: { left: ${bounds.left}, right: ${bounds.right}, top: ${bounds.top}, bottom: ${bounds.bottom} },`
-    ).join('\n');
-    const fullConfig = `const imageBounds: Record<string, ImageBounds> = {\n${allBounds}\n};\n\n// Y Offset to apply in coordsToImagePosition:\nconst Y_OFFSET = ${yOffset};`;
-    navigator.clipboard.writeText(fullConfig);
+    navigator.clipboard.writeText(generateAllConfig());
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Pin size for calculations
   const PIN_SIZE = 28;
 
   return (
     <div className="min-h-screen pt-24 pb-12 bg-gray-100">
       <div className="max-w-6xl mx-auto px-4">
         <h1 className="text-3xl font-bold text-center mb-2">
-          Full Pin Calibration Tool
+          Per-Map Pin Calibration
         </h1>
         <p className="text-center text-gray-600 mb-6">
-          Drag ALL 12 pins to their correct locations. Extreme points (outlined) set the bounds.
+          Calibrate each map color separately. Exports ALL pin positions for each map.
         </p>
 
-        {/* Color Selector */}
-        <div className="flex flex-wrap justify-center gap-2 mb-6">
-          {australiaMapColors.map((color) => (
-            <button
-              key={color.id}
-              onClick={() => setSelectedColorId(color.id)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                selectedColorId === color.id
-                  ? "bg-gray-900 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              {color.name}
-            </button>
-          ))}
+        {/* Color Selector with Calibration Status */}
+        <div className="bg-white rounded-xl p-4 mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium text-gray-700">Select Map Color:</span>
+            <span className="text-sm text-gray-500">
+              {calibratedColors.size} / {australiaMapColors.length} calibrated
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {australiaMapColors.map((color) => {
+              const isCalibrated = calibratedColors.has(color.id);
+              const isSelected = selectedColorId === color.id;
+              return (
+                <button
+                  key={color.id}
+                  onClick={() => setSelectedColorId(color.id)}
+                  className={`relative px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    isSelected
+                      ? "bg-gray-900 text-white"
+                      : isCalibrated
+                      ? "bg-green-100 text-green-800 hover:bg-green-200"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {color.name}
+                  {isCalibrated && !isSelected && (
+                    <CheckCircle size={12} className="inline ml-1 text-green-600" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Controls Row */}
         <div className="flex flex-wrap gap-4 justify-center mb-6">
-          {/* Y Offset Control */}
           <div className="bg-white rounded-xl p-4 flex-1 max-w-xs">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-700">Y Offset</label>
+              <label className="text-sm font-medium text-gray-700">Y Offset (global)</label>
               <span className="text-sm font-mono bg-gray-100 px-2 py-0.5 rounded">{yOffset}</span>
             </div>
             <input
@@ -224,7 +337,6 @@ export default function CalibratePage() {
             />
           </div>
 
-          {/* Toggle Labels */}
           <div className="bg-white rounded-xl p-4 flex items-center gap-3">
             <label className="text-sm font-medium text-gray-700">Labels</label>
             <button
@@ -235,18 +347,27 @@ export default function CalibratePage() {
             </button>
           </div>
 
-          {/* Reset */}
           <button
-            onClick={resetPins}
+            onClick={resetCurrentColor}
             className="bg-white rounded-xl p-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50"
           >
             <RotateCcw size={16} />
-            <span className="text-sm font-medium">Reset</span>
+            <span className="text-sm font-medium">Reset This Map</span>
           </button>
         </div>
 
-        {/* Map with All Draggable Pins */}
+        {/* Map with Pins */}
         <div className="bg-white rounded-2xl shadow-xl p-4 sm:p-6 max-w-2xl mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold text-lg">{colorConfig.name}</h2>
+            {calibratedColors.has(selectedColorId) && (
+              <span className="flex items-center gap-1 text-sm text-green-600">
+                <CheckCircle size={16} />
+                Calibrated
+              </span>
+            )}
+          </div>
+
           <div
             ref={containerRef}
             className="relative aspect-square w-full select-none touch-none cursor-crosshair"
@@ -256,7 +377,6 @@ export default function CalibratePage() {
             onTouchMove={handleTouchMove}
             onTouchEnd={handleDragEnd}
           >
-            {/* Map Image */}
             <Image
               src={colorConfig.image}
               alt={colorConfig.name}
@@ -266,9 +386,8 @@ export default function CalibratePage() {
               draggable={false}
             />
 
-            {/* All Draggable Pins */}
             {calibrationPoints.map((point) => {
-              const pos = pinPositions[point.id];
+              const pos = currentPinPositions[point.id] || defaultPinPositions[point.id];
               const isBeingDragged = draggingPin === point.id;
               const pinSize = point.isExtreme ? PIN_SIZE : PIN_SIZE - 4;
               
@@ -283,33 +402,23 @@ export default function CalibratePage() {
                     top: `${pos.y}%`,
                   }}
                 >
-                  {/* 
-                    Pin wrapper - the pin tip is positioned exactly at the parent's origin (0,0)
-                    We offset the visual pin upward and leftward so its tip is at origin
-                  */}
                   <div 
                     className="cursor-grab active:cursor-grabbing"
                     style={{
                       position: 'absolute',
-                      // Offset so pin TIP is at (0,0) - move left by half width, up by full height
                       left: `-${pinSize / 2}px`,
                       top: `-${pinSize}px`,
                     }}
                     onMouseDown={(e) => handleMouseDown(point.id, e)}
                     onTouchStart={(e) => handleTouchStart(point.id, e)}
                   >
-                    {/* Pin with different style for extreme points */}
                     <div className="relative">
                       <MapPin
                         size={pinSize}
-                        style={{ 
-                          color: point.color, 
-                          fill: point.color,
-                        }}
+                        style={{ color: point.color, fill: point.color }}
                         className="drop-shadow-lg"
                         strokeWidth={point.isExtreme ? 2.5 : 2}
                       />
-                      {/* Ring around extreme points */}
                       {point.isExtreme && (
                         <div 
                           className="absolute -inset-1 rounded-full border-2 border-dashed animate-pulse"
@@ -318,113 +427,119 @@ export default function CalibratePage() {
                       )}
                     </div>
                     
-                    {/* Label */}
                     {showLabels && (
                       <div
                         className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap shadow-sm"
-                        style={{ 
-                          backgroundColor: point.color, 
-                          color: "white",
-                          opacity: isBeingDragged ? 1 : 0.9,
-                        }}
+                        style={{ backgroundColor: point.color, color: "white", opacity: isBeingDragged ? 1 : 0.9 }}
                       >
                         {point.name}
                       </div>
                     )}
                   </div>
 
-                  {/* Small dot at exact position for reference */}
                   <div 
                     className="absolute w-1 h-1 rounded-full bg-black opacity-50"
-                    style={{
-                      left: '-2px',
-                      top: '-2px',
-                    }}
+                    style={{ left: '-2px', top: '-2px' }}
                   />
                 </div>
               );
             })}
           </div>
 
-          {/* Legend */}
+          {/* Live Pin Positions Table */}
           <div className="mt-4 pt-4 border-t border-gray-100">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-              {calibrationPoints.map((point) => (
-                <div key={point.id} className="flex items-center gap-1.5">
-                  <MapPin 
-                    size={12} 
-                    style={{ color: point.color, fill: point.color }} 
-                    strokeWidth={point.isExtreme ? 3 : 2}
-                  />
-                  <span className={point.isExtreme ? "font-semibold" : ""}>
-                    {point.name}
-                  </span>
-                </div>
-              ))}
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Pin Positions:</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-xs">
+              {calibrationPoints.map((point) => {
+                const pos = currentPinPositions[point.id] || defaultPinPositions[point.id];
+                return (
+                  <div 
+                    key={point.id} 
+                    className={`p-2 rounded ${point.isExtreme ? 'bg-amber-50 border border-amber-200' : 'bg-gray-50'}`}
+                  >
+                    <div className="flex items-center gap-1 mb-1">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: point.color }} />
+                      <span className="font-medium truncate">{point.name}</span>
+                    </div>
+                    <div className="font-mono text-gray-600">
+                      x: {pos.x.toFixed(1)}, y: {pos.y.toFixed(1)}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
 
-        {/* Output Config */}
+        {/* Output - Current Map */}
         <div className="mt-8 bg-white rounded-xl p-6 max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold">Calculated Bounds:</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={copyConfig}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                {copied ? <Check size={14} /> : <Copy size={14} />}
-                Copy This
-              </button>
+            <h2 className="font-semibold">Full Config for {colorConfig.name}:</h2>
+            <button
+              onClick={copyCurrentConfig}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              Copy & Mark Done
+            </button>
+          </div>
+          
+          <pre className="bg-gray-100 p-4 rounded-lg text-xs overflow-x-auto max-h-64 overflow-y-auto">
+{generateCurrentConfig()}
+          </pre>
+        </div>
+
+        {/* Export All */}
+        {calibratedColors.size > 0 && (
+          <div className="mt-6 bg-green-50 border border-green-200 rounded-xl p-6 max-w-2xl mx-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-semibold text-green-800">Export All Calibrated Maps</h2>
+                <p className="text-sm text-green-600">{calibratedColors.size} maps with full pin data</p>
+              </div>
               <button
                 onClick={copyAllConfig}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+                className="flex items-center gap-1.5 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 <Copy size={14} />
                 Copy Full Config
               </button>
             </div>
-          </div>
-          
-          <pre className="bg-gray-100 p-4 rounded-lg text-sm overflow-x-auto">
-{`${selectedColorId}: { left: ${bounds.left}, right: ${bounds.right}, top: ${bounds.top}, bottom: ${bounds.bottom} },
-
-// Y_OFFSET = ${yOffset}`}
-          </pre>
-
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-            <strong>Tips:</strong>
-            <ul className="mt-1 ml-4 list-disc space-y-1">
-              <li><strong>Extreme points</strong> (dashed rings) set the bounds - position these first</li>
-              <li><strong>City pins</strong> verify accuracy - they should land correctly after extremes are set</li>
-              <li><strong>Y Offset</strong> shifts ALL pins up/down if there&apos;s a consistent vertical error</li>
-              <li><strong>Copy Full Config</strong> applies these bounds to all colors (fine-tune each separately)</li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Debug: Pin Positions */}
-        <div className="mt-6 bg-white rounded-xl p-6 max-w-2xl mx-auto">
-          <h2 className="font-semibold mb-3">Pin Positions:</h2>
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs font-mono">
-            {calibrationPoints.map((point) => {
-              const pos = pinPositions[point.id];
-              return (
-                <div 
-                  key={point.id} 
-                  className={`p-2 rounded flex items-center gap-1.5 ${point.isExtreme ? 'bg-amber-50 border border-amber-200' : 'bg-gray-100'}`}
+            
+            <div className="flex flex-wrap gap-1 mb-4">
+              {australiaMapColors.map(color => (
+                <span
+                  key={color.id}
+                  className={`px-2 py-0.5 rounded text-xs ${
+                    calibratedColors.has(color.id)
+                      ? "bg-green-200 text-green-800"
+                      : "bg-gray-200 text-gray-500"
+                  }`}
                 >
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: point.color }}
-                  />
-                  <span className="truncate">{point.id}:</span>
-                  <span className="text-gray-600">{pos.x.toFixed(0)},{pos.y.toFixed(0)}</span>
-                </div>
-              );
-            })}
+                  {color.name}
+                </span>
+              ))}
+            </div>
+
+            <details className="text-sm">
+              <summary className="cursor-pointer text-green-700 hover:text-green-900 font-medium">
+                Preview full export...
+              </summary>
+              <pre className="mt-2 bg-white p-4 rounded-lg text-xs overflow-x-auto max-h-96 overflow-y-auto border border-green-200">
+{generateAllConfig()}
+              </pre>
+            </details>
           </div>
+        )}
+
+        {/* Reset All */}
+        <div className="mt-6 text-center">
+          <button
+            onClick={resetAll}
+            className="text-sm text-red-600 hover:text-red-800 underline"
+          >
+            Reset All Calibrations
+          </button>
         </div>
       </div>
     </div>

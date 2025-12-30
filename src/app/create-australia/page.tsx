@@ -1,8 +1,8 @@
 // src/app/create-australia/page.tsx
 "use client";
 
-import { useState, useCallback } from "react";
-import { motion } from "framer-motion";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   MapLocation,
   PrintSize,
@@ -13,6 +13,7 @@ import {
 import { priceConfig, calculateTotal } from "@/lib/pricing";
 import AustraliaLocationSearch from "@/components/create-australia/AustraliaLocationSearch";
 import AustraliaPrintPreview from "@/components/create-australia/AustraliaPrintPreview";
+import AustraliaMiniPreview from "@/components/create-australia/AustraliaMiniPreview";
 import { AustraliaColorPreviewExpanded } from "@/components/create-australia/AustraliaColorSelector";
 import AustraliaTextEditor from "@/components/create-australia/AustraliaTextEditor";
 import AustraliaProductOptions from "@/components/create-australia/AustraliaProductOptions";
@@ -35,6 +36,44 @@ export default function CreateAustraliaPage() {
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [showMiniPreview, setShowMiniPreview] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  // Track scroll position to show/hide mini preview on mobile
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!previewRef.current) return;
+      
+      const previewRect = previewRef.current.getBoundingClientRect();
+      // Show mini preview when the bottom of the preview is above the header (96px)
+      const previewBottom = previewRect.bottom;
+      setShowMiniPreview(previewBottom < 96);
+    };
+
+    // Run once on mount to check initial state
+    handleScroll();
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Scroll to center the preview in viewport
+  const scrollToPreview = () => {
+    if (!previewRef.current) return;
+    
+    const previewRect = previewRef.current.getBoundingClientRect();
+    const previewHeight = previewRect.height;
+    const viewportHeight = window.innerHeight;
+    const previewTop = previewRect.top + window.scrollY;
+    
+    // Calculate scroll position to center the preview
+    const scrollTarget = previewTop - (viewportHeight / 2) + (previewHeight / 2);
+    
+    window.scrollTo({
+      top: Math.max(0, scrollTarget),
+      behavior: "smooth",
+    });
+  };
 
   // Handlers
   const handleLocationSelect = useCallback((location: MapLocation) => {
@@ -106,6 +145,17 @@ export default function CreateAustraliaPage() {
 
   return (
     <div className="min-h-screen pt-20 lg:pt-24 bg-cream">
+      {/* Mobile Sticky Mini Preview */}
+      <AnimatePresence>
+        {showMiniPreview && (
+          <AustraliaMiniPreview
+            customization={customization}
+            product={product}
+            onTap={scrollToPreview}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
         {/* Page Header */}
         <motion.div
@@ -126,6 +176,7 @@ export default function CreateAustraliaPage() {
         <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
           {/* Left Column - Preview */}
           <motion.div
+            ref={previewRef}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}

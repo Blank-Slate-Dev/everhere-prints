@@ -7,48 +7,276 @@ export interface AustraliaMapColor {
   pinColor: string;
   textColor: string;
   accentColor: string;
-  // Where Australia sits within this specific image (percentage values 0-100)
-  bounds: ImageBounds;
 }
 
-interface ImageBounds {
-  // Where the Australia outline starts/ends within the image (as percentages)
-  left: number;   // Western edge of Australia (Steep Point)
-  right: number;  // Eastern edge of Australia (Cape Byron)
-  top: number;    // Northern edge (Cape York)
-  bottom: number; // Southern edge (includes Tasmania)
+interface PinPosition {
+  x: number;
+  y: number;
 }
 
-// Australia's actual geographic coordinates (extended for Tasmania)
+interface CalibrationPoint {
+  lat: number;
+  lng: number;
+  positions: Record<string, PinPosition>;
+}
+
+// Australia's geographic bounds
 const GEO_BOUNDS = {
-  west: 113.15,   // Westernmost point (Steep Point, WA)
-  east: 153.64,   // Easternmost point (Cape Byron, NSW)
-  north: -10.68,  // Northernmost point (Cape York, QLD)
-  south: -43.64,  // Southernmost point (South East Cape, Tasmania)
+  west: 113.15,   // Steep Point
+  east: 153.64,   // Cape Byron
+  north: -10.68,  // Cape York
+  south: -43.64,  // South of Tasmania
 };
 
-// Y offset correction - shifts pins up/down to compensate for image positioning
-const Y_OFFSET = 0; // Adjust this based on calibration
-
-// CALIBRATED bounds for each map image
-// These values should be updated using the calibration tool at /calibrate
-const imageBounds: Record<string, ImageBounds> = {
-  blue: { left: 5, right: 93, top: 11, bottom: 80 },
-  green: { left: 4, right: 95, top: 8, bottom: 81 },
-  pink: { left: 4, right: 95, top: 10, bottom: 81 },
-  purple: { left: 5, right: 92, top: 12, bottom: 81 },
-  orange: { left: 6, right: 92, top: 11, bottom: 80 },
-  yellow: { left: 7, right: 92, top: 11, bottom: 79 },
-  red: { left: 7, right: 92, top: 12, bottom: 80 },
-  brown: { left: 5, right: 96, top: 12, bottom: 81 },
-  cream: { left: 9, right: 88, top: 13, bottom: 75 },
-  white: { left: 7, right: 92, top: 13, bottom: 78 },
-  grey: { left: 6, right: 94, top: 13, bottom: 80 },
-  black: { left: 8, right: 92, top: 12, bottom: 77 },
+// Calibration data for each map color - manually calibrated pin positions
+const mapCalibrationData: Record<string, { bounds: { left: number; right: number; top: number; bottom: number }; pins: Record<string, PinPosition> }> = {
+  blue: {
+    bounds: { left: 4.8, right: 94.6, top: 11, bottom: 91.2 },
+    pins: {
+      steepPoint: { x: 4.8, y: 47.1 },
+      capeByron: { x: 94.6, y: 47.0 },
+      capeYork: { x: 70.6, y: 11.0 },
+      hobart: { x: 80.3, y: 89.4 },
+      perth: { x: 11.2, y: 62.5 },
+      darwin: { x: 45.1, y: 14.7 },
+      brisbane: { x: 91.3, y: 43.0 },
+      melbourne: { x: 74.8, y: 76.9 },
+      sydney: { x: 89.1, y: 66.6 },
+      adelaide: { x: 62.1, y: 69.0 },
+      cairns: { x: 77.9, y: 26.4 },
+      alice: { x: 51.9, y: 38.3 },
+    },
+  },
+  green: {
+    bounds: { left: 3.2, right: 97.6, top: 8.2, bottom: 91.8 },
+    pins: {
+      steepPoint: { x: 3.2, y: 49.0 },
+      capeByron: { x: 97.6, y: 48.7 },
+      capeYork: { x: 73.6, y: 8.2 },
+      hobart: { x: 78.8, y: 89.9 },
+      perth: { x: 9.6, y: 62.3 },
+      darwin: { x: 45.0, y: 11.3 },
+      brisbane: { x: 95.4, y: 44.7 },
+      melbourne: { x: 74.2, y: 77.1 },
+      sydney: { x: 90.2, y: 67.9 },
+      adelaide: { x: 62.2, y: 68.2 },
+      cairns: { x: 80.9, y: 22.7 },
+      alice: { x: 52.4, y: 35.1 },
+    },
+  },
+  pink: {
+    bounds: { left: 3.8, right: 96.9, top: 9.9, bottom: 91.6 },
+    pins: {
+      steepPoint: { x: 3.8, y: 48.7 },
+      capeByron: { x: 96.9, y: 44.7 },
+      capeYork: { x: 70.1, y: 9.9 },
+      hobart: { x: 81.0, y: 89.7 },
+      perth: { x: 10.3, y: 62.5 },
+      darwin: { x: 45.4, y: 13.4 },
+      brisbane: { x: 93.2, y: 41.5 },
+      melbourne: { x: 74.3, y: 77.1 },
+      sydney: { x: 89.8, y: 68.9 },
+      adelaide: { x: 61.6, y: 68.1 },
+      cairns: { x: 77.7, y: 21.1 },
+      alice: { x: 51.2, y: 35.7 },
+    },
+  },
+  purple: {
+    bounds: { left: 6.3, right: 94.3, top: 12, bottom: 90.4 },
+    pins: {
+      steepPoint: { x: 6.3, y: 50.0 },
+      capeByron: { x: 94.3, y: 47.7 },
+      capeYork: { x: 69.2, y: 12.0 },
+      hobart: { x: 80.8, y: 88.6 },
+      perth: { x: 12.4, y: 62.6 },
+      darwin: { x: 45.6, y: 15.9 },
+      brisbane: { x: 90.8, y: 44.0 },
+      melbourne: { x: 74.9, y: 77.5 },
+      sydney: { x: 89.5, y: 67.6 },
+      adelaide: { x: 61.8, y: 68.7 },
+      cairns: { x: 76.7, y: 25.2 },
+      alice: { x: 50.7, y: 39.1 },
+    },
+  },
+  orange: {
+    bounds: { left: 6.6, right: 95.2, top: 12.3, bottom: 90.7 },
+    pins: {
+      steepPoint: { x: 6.6, y: 48.7 },
+      capeByron: { x: 95.2, y: 53.0 },
+      capeYork: { x: 70.5, y: 12.3 },
+      hobart: { x: 82.2, y: 88.9 },
+      perth: { x: 12.0, y: 62.6 },
+      darwin: { x: 45.2, y: 15.7 },
+      brisbane: { x: 93.7, y: 46.8 },
+      melbourne: { x: 76.1, y: 76.7 },
+      sydney: { x: 88.0, y: 63.0 },
+      adelaide: { x: 62.5, y: 69.2 },
+      cairns: { x: 77.9, y: 26.1 },
+      alice: { x: 51.1, y: 40.0 },
+    },
+  },
+  yellow: {
+    bounds: { left: 7.2, right: 94.1, top: 12.7, bottom: 89.4 },
+    pins: {
+      steepPoint: { x: 7.2, y: 49.5 },
+      capeByron: { x: 94.1, y: 49.2 },
+      capeYork: { x: 68.8, y: 12.7 },
+      hobart: { x: 81.4, y: 87.6 },
+      perth: { x: 13.0, y: 62.0 },
+      darwin: { x: 44.4, y: 13.9 },
+      brisbane: { x: 92.0, y: 44.8 },
+      melbourne: { x: 74.7, y: 75.8 },
+      sydney: { x: 90.2, y: 65.4 },
+      adelaide: { x: 59.6, y: 68.1 },
+      cairns: { x: 77.2, y: 26.4 },
+      alice: { x: 52.1, y: 37.0 },
+    },
+  },
+  red: {
+    bounds: { left: 5, right: 95.2, top: 11.9, bottom: 90.2 },
+    pins: {
+      steepPoint: { x: 5.0, y: 48.0 },
+      capeByron: { x: 95.2, y: 53.0 },
+      capeYork: { x: 70.1, y: 11.9 },
+      hobart: { x: 82.3, y: 88.4 },
+      perth: { x: 12.0, y: 58.0 },
+      darwin: { x: 44.9, y: 15.7 },
+      brisbane: { x: 94.3, y: 48.3 },
+      melbourne: { x: 75.7, y: 76.7 },
+      sydney: { x: 89.5, y: 67.4 },
+      adelaide: { x: 62.6, y: 68.9 },
+      cairns: { x: 77.9, y: 26.4 },
+      alice: { x: 51.7, y: 38.4 },
+    },
+  },
+  brown: {
+    bounds: { left: 5.1, right: 95, top: 11, bottom: 93.4 },
+    pins: {
+      steepPoint: { x: 5.1, y: 47.7 },
+      capeByron: { x: 95.0, y: 52.1 },
+      capeYork: { x: 70.5, y: 11.0 },
+      hobart: { x: 82.1, y: 91.5 },
+      perth: { x: 11.1, y: 63.3 },
+      darwin: { x: 45.8, y: 16.0 },
+      brisbane: { x: 94.6, y: 46.6 },
+      melbourne: { x: 76.3, y: 77.7 },
+      sydney: { x: 89.9, y: 68.4 },
+      adelaide: { x: 62.5, y: 71.1 },
+      cairns: { x: 79.0, y: 27.5 },
+      alice: { x: 50.6, y: 38.7 },
+    },
+  },
+  cream: {
+    bounds: { left: 9.3, right: 87.3, top: 12.6, bottom: 84.5 },
+    pins: {
+      steepPoint: { x: 9.3, y: 45.0 },
+      capeByron: { x: 87.3, y: 49.2 },
+      capeYork: { x: 65.5, y: 12.6 },
+      hobart: { x: 75.8, y: 82.8 },
+      perth: { x: 14.9, y: 58.5 },
+      darwin: { x: 44.1, y: 16.3 },
+      brisbane: { x: 86.5, y: 44.9 },
+      melbourne: { x: 70.4, y: 71.5 },
+      sydney: { x: 82.7, y: 63.0 },
+      adelaide: { x: 59.0, y: 64.6 },
+      cairns: { x: 71.6, y: 25.6 },
+      alice: { x: 49.5, y: 36.5 },
+    },
+  },
+  white: {
+    bounds: { left: 6.8, right: 91.4, top: 12.5, bottom: 87.8 },
+    pins: {
+      steepPoint: { x: 6.8, y: 47.7 },
+      capeByron: { x: 91.4, y: 49.7 },
+      capeYork: { x: 67.5, y: 12.5 },
+      hobart: { x: 78.7, y: 86.1 },
+      perth: { x: 12.7, y: 62.7 },
+      darwin: { x: 45.2, y: 16.5 },
+      brisbane: { x: 90.1, y: 43.9 },
+      melbourne: { x: 73.1, y: 74.8 },
+      sydney: { x: 86.9, y: 64.1 },
+      adelaide: { x: 60.1, y: 67.8 },
+      cairns: { x: 74.9, y: 25.6 },
+      alice: { x: 51.2, y: 37.3 },
+    },
+  },
+  grey: {
+    bounds: { left: 5.8, right: 94.2, top: 12.3, bottom: 89.8 },
+    pins: {
+      steepPoint: { x: 5.8, y: 47.0 },
+      capeByron: { x: 94.2, y: 52.3 },
+      capeYork: { x: 70.3, y: 12.3 },
+      hobart: { x: 80.8, y: 88.1 },
+      perth: { x: 12.8, y: 61.9 },
+      darwin: { x: 44.7, y: 15.5 },
+      brisbane: { x: 92.8, y: 46.1 },
+      melbourne: { x: 75.3, y: 76.0 },
+      sydney: { x: 88.6, y: 66.6 },
+      adelaide: { x: 61.9, y: 68.2 },
+      cairns: { x: 78.1, y: 27.1 },
+      alice: { x: 51.0, y: 39.2 },
+    },
+  },
+  black: {
+    bounds: { left: 6.7, right: 90.5, top: 12.2, bottom: 87.3 },
+    pins: {
+      steepPoint: { x: 6.7, y: 44.9 },
+      capeByron: { x: 90.5, y: 51.3 },
+      capeYork: { x: 67.9, y: 12.2 },
+      hobart: { x: 78.7, y: 85.6 },
+      perth: { x: 12.8, y: 59.1 },
+      darwin: { x: 44.9, y: 15.7 },
+      brisbane: { x: 89.7, y: 45.2 },
+      melbourne: { x: 72.8, y: 73.2 },
+      sydney: { x: 86.4, y: 63.4 },
+      adelaide: { x: 59.1, y: 65.5 },
+      cairns: { x: 75.1, y: 25.8 },
+      alice: { x: 50.6, y: 38.0 },
+    },
+  },
 };
 
-// Default bounds if a map isn't specifically calibrated
-const defaultBounds: ImageBounds = { left: 6, right: 92, top: 12, bottom: 80 };
+// Known calibration points with their coordinates
+const calibrationPoints: CalibrationPoint[] = [
+  { lat: -26.15, lng: 113.15, positions: {} }, // steepPoint
+  { lat: -28.64, lng: 153.64, positions: {} }, // capeByron
+  { lat: -10.68, lng: 142.53, positions: {} }, // capeYork
+  { lat: -42.88, lng: 147.33, positions: {} }, // hobart
+  { lat: -31.95, lng: 115.86, positions: {} }, // perth
+  { lat: -12.46, lng: 130.85, positions: {} }, // darwin
+  { lat: -27.47, lng: 153.03, positions: {} }, // brisbane
+  { lat: -37.81, lng: 144.96, positions: {} }, // melbourne
+  { lat: -33.87, lng: 151.21, positions: {} }, // sydney
+  { lat: -34.93, lng: 138.60, positions: {} }, // adelaide
+  { lat: -16.92, lng: 145.78, positions: {} }, // cairns
+  { lat: -23.70, lng: 133.88, positions: {} }, // alice
+];
+
+// Map pin IDs to calibration point indices
+const pinIdToIndex: Record<string, number> = {
+  steepPoint: 0,
+  capeByron: 1,
+  capeYork: 2,
+  hobart: 3,
+  perth: 4,
+  darwin: 5,
+  brisbane: 6,
+  melbourne: 7,
+  sydney: 8,
+  adelaide: 9,
+  cairns: 10,
+  alice: 11,
+};
+
+// Build calibration points positions for each color
+Object.entries(mapCalibrationData).forEach(([colorId, data]) => {
+  Object.entries(data.pins).forEach(([pinId, pos]) => {
+    const idx = pinIdToIndex[pinId];
+    if (idx !== undefined) {
+      calibrationPoints[idx].positions[colorId] = pos;
+    }
+  });
+});
 
 export const australiaMapColors: AustraliaMapColor[] = [
   {
@@ -58,7 +286,6 @@ export const australiaMapColors: AustraliaMapColor[] = [
     pinColor: "#0369A1",
     textColor: "#075985",
     accentColor: "#0EA5E9",
-    bounds: imageBounds.blue,
   },
   {
     id: "green",
@@ -67,7 +294,6 @@ export const australiaMapColors: AustraliaMapColor[] = [
     pinColor: "#047857",
     textColor: "#065F46",
     accentColor: "#10B981",
-    bounds: imageBounds.green,
   },
   {
     id: "pink",
@@ -76,7 +302,6 @@ export const australiaMapColors: AustraliaMapColor[] = [
     pinColor: "#BE185D",
     textColor: "#9D174D",
     accentColor: "#EC4899",
-    bounds: imageBounds.pink,
   },
   {
     id: "purple",
@@ -85,7 +310,6 @@ export const australiaMapColors: AustraliaMapColor[] = [
     pinColor: "#7C3AED",
     textColor: "#5B21B6",
     accentColor: "#8B5CF6",
-    bounds: imageBounds.purple,
   },
   {
     id: "orange",
@@ -94,7 +318,6 @@ export const australiaMapColors: AustraliaMapColor[] = [
     pinColor: "#EA580C",
     textColor: "#9A3412",
     accentColor: "#F97316",
-    bounds: imageBounds.orange,
   },
   {
     id: "yellow",
@@ -103,7 +326,6 @@ export const australiaMapColors: AustraliaMapColor[] = [
     pinColor: "#CA8A04",
     textColor: "#854D0E",
     accentColor: "#EAB308",
-    bounds: imageBounds.yellow,
   },
   {
     id: "red",
@@ -112,7 +334,6 @@ export const australiaMapColors: AustraliaMapColor[] = [
     pinColor: "#DC2626",
     textColor: "#991B1B",
     accentColor: "#EF4444",
-    bounds: imageBounds.red,
   },
   {
     id: "brown",
@@ -121,7 +342,6 @@ export const australiaMapColors: AustraliaMapColor[] = [
     pinColor: "#92400E",
     textColor: "#78350F",
     accentColor: "#B45309",
-    bounds: imageBounds.brown,
   },
   {
     id: "cream",
@@ -130,7 +350,6 @@ export const australiaMapColors: AustraliaMapColor[] = [
     pinColor: "#A16207",
     textColor: "#854D0E",
     accentColor: "#CA8A04",
-    bounds: imageBounds.cream,
   },
   {
     id: "white",
@@ -139,7 +358,6 @@ export const australiaMapColors: AustraliaMapColor[] = [
     pinColor: "#57534E",
     textColor: "#44403C",
     accentColor: "#78716C",
-    bounds: imageBounds.white,
   },
   {
     id: "grey",
@@ -148,7 +366,6 @@ export const australiaMapColors: AustraliaMapColor[] = [
     pinColor: "#4B5563",
     textColor: "#374151",
     accentColor: "#6B7280",
-    bounds: imageBounds.grey,
   },
   {
     id: "black",
@@ -157,44 +374,45 @@ export const australiaMapColors: AustraliaMapColor[] = [
     pinColor: "#1F2937",
     textColor: "#111827",
     accentColor: "#374151",
-    bounds: imageBounds.black,
   },
 ];
 
 /**
- * Convert geographic coordinates to image position percentages
+ * Convert geographic coordinates to image position using linear interpolation
+ * within the calibrated bounds for each map color.
  * 
- * @param latitude - The latitude coordinate (negative for Southern hemisphere)
- * @param longitude - The longitude coordinate
- * @param colorId - The map color ID to use the correct image bounds
- * @returns { x: 0-100, y: 0-100 } representing percentage position on image
+ * Each map has been calibrated with 4 extreme points that define its bounds.
+ * We use simple linear interpolation within those bounds for predictable positioning.
  */
 export function coordsToImagePosition(
   latitude: number,
   longitude: number,
   colorId: string = "blue"
 ): { x: number; y: number; isValid: boolean } {
-  // Get the bounds for this specific map image
-  const colorConfig = australiaMapColors.find((c) => c.id === colorId);
-  const bounds = colorConfig?.bounds || defaultBounds;
-
-  // Check if coordinates are roughly within Australia (including Tasmania)
+  // Check if coordinates are roughly within Australia
   const isValid =
     latitude <= GEO_BOUNDS.north + 2 &&
     latitude >= GEO_BOUNDS.south - 2 &&
     longitude >= GEO_BOUNDS.west - 2 &&
     longitude <= GEO_BOUNDS.east + 2;
 
-  // Calculate relative position within Australia (0 to 1)
-  const relativeX = (longitude - GEO_BOUNDS.west) / (GEO_BOUNDS.east - GEO_BOUNDS.west);
-  const relativeY = (latitude - GEO_BOUNDS.north) / (GEO_BOUNDS.south - GEO_BOUNDS.north);
+  // Get calibration data for this color
+  const colorData = mapCalibrationData[colorId];
+  if (!colorData) {
+    // Fallback to blue if color not found
+    return coordsToImagePosition(latitude, longitude, "blue");
+  }
 
-  // Map to the actual position within this specific image
-  const imageWidth = bounds.right - bounds.left;
-  const imageHeight = bounds.bottom - bounds.top;
+  const { bounds } = colorData;
   
-  const x = bounds.left + (relativeX * imageWidth);
-  const y = bounds.top + (relativeY * imageHeight) + Y_OFFSET;
+  // Linear interpolation using the calibrated bounds for this specific map
+  // X: longitude maps from GEO_BOUNDS.west→east to bounds.left→right
+  const lngRatio = (longitude - GEO_BOUNDS.west) / (GEO_BOUNDS.east - GEO_BOUNDS.west);
+  const x = bounds.left + lngRatio * (bounds.right - bounds.left);
+  
+  // Y: latitude maps from GEO_BOUNDS.north→south to bounds.top→bottom
+  const latRatio = (latitude - GEO_BOUNDS.north) / (GEO_BOUNDS.south - GEO_BOUNDS.north);
+  const y = bounds.top + latRatio * (bounds.bottom - bounds.top);
 
   // Clamp to valid range
   return {
@@ -209,6 +427,13 @@ export function coordsToImagePosition(
  */
 export function getAustraliaMapColor(colorId: string): AustraliaMapColor {
   return australiaMapColors.find((c) => c.id === colorId) || australiaMapColors[0];
+}
+
+/**
+ * Get the calibration data for a specific color
+ */
+export function getCalibrationData(colorId: string) {
+  return mapCalibrationData[colorId] || mapCalibrationData.blue;
 }
 
 /**
