@@ -5,12 +5,13 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, MapPin } from "lucide-react";
+import { Menu, X, MapPin, ChevronDown } from "lucide-react";
 import Button from "@/components/ui/Button";
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProductsOpen, setIsProductsOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -58,6 +59,58 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
+            {/* Products Dropdown */}
+            <div
+              className="relative"
+              onMouseEnter={() => setIsProductsOpen(true)}
+              onMouseLeave={() => setIsProductsOpen(false)}
+            >
+              <button className="flex items-center gap-1 text-sm font-medium text-brand-700 hover:text-charcoal transition-colors">
+                Products
+                <ChevronDown
+                  size={16}
+                  className={`transition-transform ${isProductsOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              <AnimatePresence>
+                {isProductsOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-brand-100 overflow-hidden"
+                  >
+                    <Link
+                      href="/create"
+                      className="block px-4 py-3 hover:bg-brand-50 transition-colors"
+                    >
+                      <p className="font-medium text-charcoal">Where We Met</p>
+                      <p className="text-xs text-brand-500 mt-0.5">
+                        Custom map print of any location
+                      </p>
+                    </Link>
+                    <Link
+                      href="/create-australia"
+                      className="block px-4 py-3 hover:bg-brand-50 transition-colors border-t border-brand-100"
+                    >
+                      <p className="font-medium text-charcoal">Australia Map</p>
+                      <p className="text-xs text-brand-500 mt-0.5">
+                        Watercolour map with pin drop
+                      </p>
+                    </Link>
+                    <Link
+                      href="/products"
+                      className="block px-4 py-3 hover:bg-brand-50 transition-colors border-t border-brand-100 text-center"
+                    >
+                      <p className="text-sm text-brand-600">View All Products →</p>
+                    </Link>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <Link
               href="/#how-it-works"
               className="text-sm font-medium text-brand-700 hover:text-charcoal transition-colors"
@@ -76,8 +129,8 @@ export default function Header() {
             >
               Reviews
             </Link>
-            <Link href="/create">
-              <Button size="sm">Create Your Map</Button>
+            <Link href="/products">
+              <Button size="sm">Create Your Print</Button>
             </Link>
           </div>
 
@@ -102,6 +155,27 @@ export default function Header() {
             className="md:hidden bg-cream border-t border-brand-100"
           >
             <div className="px-6 py-4 space-y-4">
+              {/* Products Section */}
+              <div className="border-b border-brand-100 pb-4">
+                <p className="text-xs uppercase tracking-wide text-brand-500 mb-2">
+                  Products
+                </p>
+                <Link
+                  href="/create"
+                  className="block py-2 text-brand-700 hover:text-charcoal transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Where We Met Map
+                </Link>
+                <Link
+                  href="/create-australia"
+                  className="block py-2 text-brand-700 hover:text-charcoal transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Australia Map
+                </Link>
+              </div>
+
               <Link
                 href="/#how-it-works"
                 className="block text-brand-700 hover:text-charcoal transition-colors"
@@ -123,8 +197,8 @@ export default function Header() {
               >
                 Reviews
               </Link>
-              <Link href="/create" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button fullWidth>Create Your Map</Button>
+              <Link href="/products" onClick={() => setIsMobileMenuOpen(false)}>
+                <Button fullWidth>Create Your Print</Button>
               </Link>
             </div>
           </motion.div>

@@ -39,3 +39,25 @@ export interface PriceConfig {
   sizes: Record<PrintSize, { name: string; dimensions: string; price: number }>;
   frames: FrameOption[];
 }
+
+// Australia Map Print Types
+export interface AustraliaMapCustomization {
+  title: string;
+  subtitle: string;
+  date: string;
+  location: MapLocation | null;
+  colorId: string;
+}
+
+export interface AustraliaProductSelection {
+  size: PrintSize;
+  frame: FrameOption;
+}
+
+export interface AustraliaOrderData {
+  customization: AustraliaMapCustomization;
+  product: AustraliaProductSelection;
+  totalPrice: number;
+}
+
+export type ProductType = "map" | "australia";
