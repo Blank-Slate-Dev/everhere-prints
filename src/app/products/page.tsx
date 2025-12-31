@@ -22,7 +22,8 @@ const products = [
     ],
     href: "/create",
     icon: MapPin,
-    image: "/products/map-preview.jpg",
+    image: null,
+    previewType: "map",
     gradient: "from-brand-100 to-brand-200",
   },
   {
@@ -30,17 +31,36 @@ const products = [
     title: "Australia Map",
     subtitle: "Watercolour Print",
     description:
-      "Mark your special place on a stunning watercolour map of Australia. Choose from 11 beautiful colour options.",
+      "Mark your special place on a stunning watercolour map of Australia. Choose from 12 beautiful colour options.",
     features: [
-      "11 watercolour colours",
+      "12 watercolour colours",
       "Artistic design",
       "Pin drop location",
       "Premium quality",
     ],
     href: "/create-australia",
     icon: Map,
-    image: "/australia/australia_pastel_blue.png",
+    image: "/australia_pastel_blue.png",
+    previewType: "watercolor",
     gradient: "from-blue-50 to-blue-100",
+  },
+  {
+    id: "newzealand-map",
+    title: "New Zealand Map",
+    subtitle: "Watercolour Print",
+    description:
+      "Mark your special place on a beautiful watercolour map of New Zealand. Choose from 12 stunning colour options.",
+    features: [
+      "12 watercolour colours",
+      "Artistic design",
+      "Pin drop location",
+      "Premium quality",
+    ],
+    href: "/create-newzealand",
+    icon: Map,
+    image: "/new_zealand_pastel_blue.png",
+    previewType: "watercolor",
+    gradient: "from-emerald-50 to-emerald-100",
   },
 ];
 
@@ -59,27 +79,27 @@ export default function ProductsPage() {
           </h1>
           <p className="mt-4 text-lg text-brand-600 max-w-2xl mx-auto">
             Select the perfect way to capture and display your special location.
-            Both options are printed on premium archival paper.
+            All prints are made on premium archival paper.
           </p>
         </motion.div>
 
         {/* Product Cards */}
-        <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {products.map((product, index) => (
             <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.15 }}
+              transition={{ delay: index * 0.1 }}
             >
-              <Link href={product.href} className="block group">
-                <div className="bg-white rounded-3xl overflow-hidden border border-brand-100 shadow-sm hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1">
+              <Link href={product.href} className="block group h-full">
+                <div className="h-full bg-white rounded-3xl overflow-hidden border border-brand-100 shadow-sm hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1 flex flex-col">
                   {/* Image Section */}
                   <div
                     className={`relative aspect-[4/3] bg-gradient-to-br ${product.gradient} overflow-hidden`}
                   >
                     <div className="absolute inset-0 flex items-center justify-center p-8">
-                      {product.id === "australia-map" ? (
+                      {product.image ? (
                         <div className="relative w-full h-full">
                           <Image
                             src={product.image}
@@ -92,16 +112,23 @@ export default function ProductsPage() {
                             initial={{ y: -20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             transition={{
-                              delay: 0.5,
+                              delay: 0.5 + index * 0.1,
                               type: "spring",
                               stiffness: 200,
                             }}
                             className="absolute"
-                            style={{ left: "70%", top: "35%" }}
+                            style={{
+                              left: product.id === "australia-map" ? "70%" : "55%",
+                              top: product.id === "australia-map" ? "35%" : "25%",
+                            }}
                           >
                             <MapPin
                               size={24}
-                              className="text-blue-600 fill-blue-600 drop-shadow-lg"
+                              className="drop-shadow-lg"
+                              style={{
+                                color: product.id === "australia-map" ? "#0369A1" : "#047857",
+                                fill: product.id === "australia-map" ? "#0369A1" : "#047857",
+                              }}
                             />
                           </motion.div>
                         </div>
@@ -125,28 +152,28 @@ export default function ProductsPage() {
                   </div>
 
                   {/* Content Section */}
-                  <div className="p-6 lg:p-8">
+                  <div className="p-6 lg:p-8 flex flex-col flex-grow">
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <p className="text-sm text-brand-500 uppercase tracking-wide">
                           {product.subtitle}
                         </p>
-                        <h2 className="text-2xl lg:text-3xl font-serif font-semibold text-charcoal mt-1">
+                        <h2 className="text-xl lg:text-2xl font-serif font-semibold text-charcoal mt-1">
                           {product.title}
                         </h2>
                       </div>
-                      <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center group-hover:bg-charcoal transition-colors">
+                      <div className="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center group-hover:bg-charcoal transition-colors flex-shrink-0">
                         <product.icon
-                          size={24}
+                          size={20}
                           className="text-brand-600 group-hover:text-white transition-colors"
                         />
                       </div>
                     </div>
 
-                    <p className="text-brand-600 mb-6">{product.description}</p>
+                    <p className="text-brand-600 mb-6 text-sm">{product.description}</p>
 
                     {/* Features */}
-                    <ul className="space-y-2 mb-6">
+                    <ul className="space-y-2 mb-6 flex-grow">
                       {product.features.map((feature) => (
                         <li
                           key={feature}
@@ -180,7 +207,7 @@ export default function ProductsPage() {
           transition={{ delay: 0.6 }}
           className="text-center text-brand-500 mt-12"
         >
-          All prints start from $59 AUD and include free delivery in Australia.
+          All prints start from $59 AUD and include free delivery in Australia & New Zealand.
         </motion.p>
       </div>
     </div>

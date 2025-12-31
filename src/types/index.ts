@@ -60,4 +60,24 @@ export interface AustraliaOrderData {
   totalPrice: number;
 }
 
-export type ProductType = "map" | "australia";
+// New Zealand Map Print Types
+export interface NewZealandMapCustomization {
+  title: string;
+  subtitle: string;
+  date: string;
+  location: MapLocation | null;
+  colorId: string;
+}
+
+export interface NewZealandProductSelection {
+  size: PrintSize;
+  frame: FrameOption;
+}
+
+export interface NewZealandOrderData {
+  customization: NewZealandMapCustomization;
+  product: NewZealandProductSelection;
+  totalPrice: number;
+}
+
+export type ProductType = "map" | "australia" | "newzealand";
