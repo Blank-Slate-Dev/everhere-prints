@@ -17,42 +17,68 @@ const GEO_BOUNDS = {
   south: -47.3,
 };
 
-// All calibration points for New Zealand
+// All calibration points for New Zealand (20 total - 4 extreme + 16 cities)
 const calibrationPoints = [
-  { id: "capeReinga", name: "Cape Reinga (North)", lat: -34.43, lng: 172.68, color: "#DC2626", isExtreme: true },
+  // Extreme boundary points (4)
+  { id: "capeReinga", name: "Cape Reinga", lat: -34.43, lng: 172.68, color: "#DC2626", isExtreme: true },
   { id: "eastCape", name: "East Cape", lat: -37.69, lng: 178.55, color: "#16A34A", isExtreme: true },
-  { id: "bluff", name: "Bluff (South)", lat: -46.60, lng: 168.35, color: "#EA580C", isExtreme: true },
-  { id: "westCape", name: "West Cape", lat: -42.45, lng: 169.15, color: "#7C3AED", isExtreme: true },
+  { id: "bluff", name: "Bluff", lat: -46.60, lng: 168.35, color: "#EA580C", isExtreme: true },
+  { id: "westCape", name: "West Cape", lat: -45.99, lng: 166.46, color: "#7C3AED", isExtreme: true },
+  // North Island - East Coast (4)
+  { id: "whangarei", name: "Whangarei", lat: -35.73, lng: 174.32, color: "#A855F7", isExtreme: false },
   { id: "auckland", name: "Auckland", lat: -36.85, lng: 174.76, color: "#EF4444", isExtreme: false },
-  { id: "wellington", name: "Wellington", lat: -41.29, lng: 174.78, color: "#F59E0B", isExtreme: false },
-  { id: "christchurch", name: "Christchurch", lat: -43.53, lng: 172.64, color: "#10B981", isExtreme: false },
-  { id: "queenstown", name: "Queenstown", lat: -45.03, lng: 168.66, color: "#3B82F6", isExtreme: false },
-  { id: "rotorua", name: "Rotorua", lat: -38.14, lng: 176.25, color: "#EC4899", isExtreme: false },
-  { id: "dunedin", name: "Dunedin", lat: -45.87, lng: 170.50, color: "#8B5CF6", isExtreme: false },
-  { id: "hamilton", name: "Hamilton", lat: -37.79, lng: 175.28, color: "#06B6D4", isExtreme: false },
   { id: "tauranga", name: "Tauranga", lat: -37.69, lng: 176.17, color: "#F97316", isExtreme: false },
+  { id: "gisborne", name: "Gisborne", lat: -38.66, lng: 178.02, color: "#14B8A6", isExtreme: false },
+  { id: "napier", name: "Napier", lat: -39.49, lng: 176.92, color: "#F472B6", isExtreme: false },
+  // North Island - Central/West (4)
+  { id: "hamilton", name: "Hamilton", lat: -37.79, lng: 175.28, color: "#06B6D4", isExtreme: false },
+  { id: "rotorua", name: "Rotorua", lat: -38.14, lng: 176.25, color: "#EC4899", isExtreme: false },
+  { id: "newPlymouth", name: "New Plymouth", lat: -39.07, lng: 174.08, color: "#84CC16", isExtreme: false },
+  { id: "wellington", name: "Wellington", lat: -41.29, lng: 174.78, color: "#F59E0B", isExtreme: false },
+  // South Island - North/West (3)
+  { id: "nelson", name: "Nelson", lat: -41.27, lng: 173.28, color: "#22D3EE", isExtreme: false },
+  { id: "greymouth", name: "Greymouth", lat: -42.45, lng: 171.21, color: "#A3E635", isExtreme: false },
+  { id: "queenstown", name: "Queenstown", lat: -45.03, lng: 168.66, color: "#3B82F6", isExtreme: false },
+  // South Island - East Coast (4)
+  { id: "christchurch", name: "Christchurch", lat: -43.53, lng: 172.64, color: "#10B981", isExtreme: false },
+  { id: "timaru", name: "Timaru", lat: -44.40, lng: 171.25, color: "#FB923C", isExtreme: false },
+  { id: "dunedin", name: "Dunedin", lat: -45.87, lng: 170.50, color: "#8B5CF6", isExtreme: false },
+  { id: "invercargill", name: "Invercargill", lat: -46.41, lng: 168.35, color: "#C084FC", isExtreme: false },
 ];
 
 // Default starting positions - rough estimates before calibration
 const defaultPinPositions: Record<string, { x: number; y: number }> = {
-  capeReinga: { x: 55, y: 5 },
-  eastCape: { x: 90, y: 28 },
-  bluff: { x: 25, y: 92 },
-  westCape: { x: 10, y: 55 },
-  auckland: { x: 58, y: 12 },
-  wellington: { x: 72, y: 38 },
-  christchurch: { x: 62, y: 55 },
-  queenstown: { x: 32, y: 72 },
-  rotorua: { x: 75, y: 22 },
-  dunedin: { x: 48, y: 78 },
-  hamilton: { x: 63, y: 16 },
-  tauranga: { x: 78, y: 18 },
+  // Extreme points
+  capeReinga: { x: 46, y: 8 },
+  eastCape: { x: 76, y: 30 },
+  bluff: { x: 29, y: 87 },
+  westCape: { x: 18, y: 83 },
+  // North Island - East Coast
+  whangarei: { x: 52, y: 15 },
+  auckland: { x: 56, y: 23 },
+  tauranga: { x: 64, y: 30 },
+  gisborne: { x: 72, y: 36 },
+  napier: { x: 67, y: 42 },
+  // North Island - Central/West
+  hamilton: { x: 59, y: 30 },
+  rotorua: { x: 65, y: 33 },
+  newPlymouth: { x: 50, y: 40 },
+  wellington: { x: 56, y: 52 },
+  // South Island - North/West
+  nelson: { x: 50, y: 55 },
+  greymouth: { x: 40, y: 62 },
+  queenstown: { x: 30, y: 78 },
+  // South Island - East Coast
+  christchurch: { x: 47, y: 67 },
+  timaru: { x: 43, y: 73 },
+  dunedin: { x: 38, y: 82 },
+  invercargill: { x: 28, y: 88 },
 };
 
 type PinPositions = Record<string, { x: number; y: number }>;
 type AllColorPositions = Record<string, PinPositions>;
 
-const STORAGE_KEY = "newzealand-map-calibration-v1";
+const STORAGE_KEY = "newzealand-map-calibration-v2";
 
 export default function CalibrateNewZealandPage() {
   const [selectedColorId, setSelectedColorId] = useState("blue");

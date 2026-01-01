@@ -320,7 +320,7 @@ export default function NewZealandPrintPreview({
         transition={{ delay: 0.3 }}
         className="absolute -right-2 top-8 md:-right-4 md:top-12 bg-charcoal text-white text-xs px-3 py-1.5 rounded-full shadow-lg z-10"
       >
-        {size} Preview
+        {size} 
       </motion.div>
     </motion.div>
   );
