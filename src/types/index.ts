@@ -80,4 +80,30 @@ export interface NewZealandOrderData {
   totalPrice: number;
 }
 
-export type ProductType = "map" | "australia" | "newzealand";
+export type ProductType = "map" | "australia" | "newzealand" | "starmap";
+
+// Star Map Print Types
+export interface StarMapCustomization {
+  title: string;
+  subtitle: string;
+  dateText: string;
+  date: Date;
+  time: string; // HH:MM format
+  location: MapLocation | null;
+  styleId: string;
+  showConstellations: boolean;
+  showConstellationNames: boolean;
+  showGrid: boolean;
+  showMilkyWay: boolean;
+}
+
+export interface StarMapProductSelection {
+  size: PrintSize;
+  frame: FrameOption;
+}
+
+export interface StarMapOrderData {
+  customization: StarMapCustomization;
+  product: StarMapProductSelection;
+  totalPrice: number;
+}

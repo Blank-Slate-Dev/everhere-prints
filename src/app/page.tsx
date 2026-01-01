@@ -2,6 +2,7 @@
 import Hero from "@/components/home/Hero";
 import HowItWorks from "@/components/home/HowItWorks";
 import Features from "@/components/home/Features";
+import LifestyleShowcase from "@/components/home/LifestyleShowcase";
 import Testimonials from "@/components/home/Testimonials";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
@@ -12,6 +13,7 @@ export default function Home() {
       <Hero />
       <HowItWorks />
       <Features />
+      <LifestyleShowcase />
       <Testimonials />
 
       {/* Final CTA Section */}
@@ -27,7 +29,7 @@ export default function Home() {
             anniversaries, weddings, or any moment worth remembering.
           </p>
           <div className="mt-10">
-            <Link href="/create">
+            <Link href="/products">
               <Button
                 size="lg"
                 className="bg-white text-charcoal hover:bg-brand-100"

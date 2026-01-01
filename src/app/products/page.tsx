@@ -4,7 +4,7 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, MapPin, Map } from "lucide-react";
+import { ArrowRight, MapPin, Map, Star } from "lucide-react";
 import Button from "@/components/ui/Button";
 
 const products = [
@@ -62,6 +62,24 @@ const products = [
     previewType: "watercolor",
     gradient: "from-emerald-50 to-emerald-100",
   },
+  {
+    id: "star-map",
+    title: "Star Map",
+    subtitle: "Night Sky Print",
+    description:
+      "Capture the exact night sky from any date and location. Perfect for birthdays, anniversaries, or that unforgettable night.",
+    features: [
+      "Any date since 1900",
+      "Accurate star positions",
+      "Constellation lines",
+      "Multiple colour styles",
+    ],
+    href: "/create-starmap",
+    icon: Star,
+    image: null,
+    previewType: "starmap",
+    gradient: "from-indigo-900 to-purple-900",
+  },
 ];
 
 export default function ProductsPage() {
@@ -78,13 +96,13 @@ export default function ProductsPage() {
             Choose Your Print Style
           </h1>
           <p className="mt-4 text-lg text-brand-600 max-w-2xl mx-auto">
-            Select the perfect way to capture and display your special location.
+            Select the perfect way to capture and display your special moment.
             All prints are made on premium archival paper.
           </p>
         </motion.div>
 
         {/* Product Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-2 gap-8">
           {products.map((product, index) => (
             <motion.div
               key={product.id}
@@ -131,6 +149,50 @@ export default function ProductsPage() {
                               }}
                             />
                           </motion.div>
+                        </div>
+                      ) : product.previewType === "starmap" ? (
+                        <div className="relative w-full h-full flex items-center justify-center">
+                          {/* Star Map Preview */}
+                          <div className="relative w-48 h-48 rounded-full overflow-hidden">
+                            {/* Dark sky background */}
+                            <div className="absolute inset-0 bg-gradient-to-b from-indigo-950 via-slate-900 to-indigo-950" />
+                            {/* Stars */}
+                            <div className="absolute inset-0">
+                              {[...Array(50)].map((_, i) => (
+                                <motion.div
+                                  key={i}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: [0.3, 1, 0.3] }}
+                                  transition={{
+                                    duration: 2 + Math.random() * 2,
+                                    repeat: Infinity,
+                                    delay: Math.random() * 2,
+                                  }}
+                                  className="absolute rounded-full bg-white"
+                                  style={{
+                                    width: `${1 + Math.random() * 2}px`,
+                                    height: `${1 + Math.random() * 2}px`,
+                                    left: `${5 + Math.random() * 90}%`,
+                                    top: `${5 + Math.random() * 90}%`,
+                                    boxShadow: "0 0 4px rgba(255,255,255,0.8)",
+                                  }}
+                                />
+                              ))}
+                            </div>
+                            {/* Constellation lines */}
+                            <svg className="absolute inset-0 w-full h-full opacity-40">
+                              <line x1="30%" y1="25%" x2="45%" y2="35%" stroke="white" strokeWidth="1" />
+                              <line x1="45%" y1="35%" x2="55%" y2="30%" stroke="white" strokeWidth="1" />
+                              <line x1="55%" y1="30%" x2="70%" y2="40%" stroke="white" strokeWidth="1" />
+                              <line x1="45%" y1="35%" x2="50%" y2="55%" stroke="white" strokeWidth="1" />
+                              <line x1="50%" y1="55%" x2="40%" y2="70%" stroke="white" strokeWidth="1" />
+                              <line x1="50%" y1="55%" x2="60%" y2="70%" stroke="white" strokeWidth="1" />
+                            </svg>
+                            {/* Circular border */}
+                            <div className="absolute inset-0 rounded-full border-2 border-white/20" />
+                          </div>
+                          {/* Frame effect */}
+                          <div className="absolute inset-8 border-4 border-white/10 rounded-lg pointer-events-none" />
                         </div>
                       ) : (
                         <div className="relative w-full h-full bg-white rounded-xl shadow-lg p-4">

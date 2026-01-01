@@ -110,6 +110,15 @@ export default function Header() {
                       </p>
                     </Link>
                     <Link
+                      href="/create-starmap"
+                      className="block px-4 py-3 hover:bg-brand-50 transition-colors border-t border-brand-100"
+                    >
+                      <p className="font-medium text-charcoal">Star Map</p>
+                      <p className="text-xs text-brand-500 mt-0.5">
+                        Night sky on your special date
+                      </p>
+                    </Link>
+                    <Link
                       href="/products"
                       className="block px-4 py-3 hover:bg-brand-50 transition-colors border-t border-brand-100 text-center"
                     >
@@ -189,6 +198,13 @@ export default function Header() {
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   New Zealand Map
+                </Link>
+                <Link
+                  href="/create-starmap"
+                  className="block py-2 text-brand-700 hover:text-charcoal transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Star Map
                 </Link>
               </div>
 
