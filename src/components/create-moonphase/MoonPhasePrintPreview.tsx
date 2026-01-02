@@ -89,10 +89,7 @@ export default function MoonPhasePrintPreview({
       className="w-full"
     >
       {/* Frame Container */}
-      <div
-        className="relative mx-auto"
-        style={{ maxWidth: "500px" }}
-      >
+      <div className="relative mx-auto max-w-md">
         {/* Frame (if selected) */}
         <div
           className="rounded-sm overflow-hidden"
