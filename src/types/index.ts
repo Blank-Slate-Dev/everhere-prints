@@ -80,7 +80,7 @@ export interface NewZealandOrderData {
   totalPrice: number;
 }
 
-export type ProductType = "map" | "australia" | "newzealand" | "starmap";
+export type ProductType = "map" | "australia" | "newzealand" | "starmap" | "moonphase";
 
 // Star Map Print Types
 export interface StarMapCustomization {
@@ -106,5 +106,27 @@ export interface StarMapProductSelection {
 export interface StarMapOrderData {
   customization: StarMapCustomization;
   product: StarMapProductSelection;
+  totalPrice: number;
+}
+
+// Moon Phase Print Types
+export interface MoonPhaseCustomization {
+  title: string;
+  subtitle: string;
+  dateText: string;
+  date: Date;
+  styleId: string;
+  showStars: boolean;
+  showPhaseLabel: boolean;
+}
+
+export interface MoonPhaseProductSelection {
+  size: PrintSize;
+  frame: FrameOption;
+}
+
+export interface MoonPhaseOrderData {
+  customization: MoonPhaseCustomization;
+  product: MoonPhaseProductSelection;
   totalPrice: number;
 }

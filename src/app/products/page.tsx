@@ -4,7 +4,7 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, MapPin, Map, Star } from "lucide-react";
+import { ArrowRight, MapPin, Map, Star, Moon } from "lucide-react";
 import Button from "@/components/ui/Button";
 
 const products = [
@@ -80,6 +80,24 @@ const products = [
     previewType: "starmap",
     gradient: "from-indigo-900 to-purple-900",
   },
+  {
+    id: "moon-phase",
+    title: "Moon Phase",
+    subtitle: "Lunar Print",
+    description:
+      "Capture the exact moon phase from any date. A beautiful, minimalist way to commemorate births, weddings, and special nights.",
+    features: [
+      "Accurate moon phase",
+      "Any date in history",
+      "6 elegant styles",
+      "Phase name included",
+    ],
+    href: "/create-moonphase",
+    icon: Moon,
+    image: null,
+    previewType: "moonphase",
+    gradient: "from-slate-800 to-slate-900",
+  },
 ];
 
 export default function ProductsPage() {
@@ -118,38 +136,48 @@ export default function ProductsPage() {
                   >
                     <div className="absolute inset-0 flex items-center justify-center p-8">
                       {product.image ? (
-                        <div className="relative w-full h-full">
+                        <motion.div
+                          initial={{ scale: 0.9 }}
+                          whileHover={{ scale: 0.95 }}
+                          className="relative w-full h-full"
+                        >
                           <Image
                             src={product.image}
                             alt={product.title}
                             fill
-                            className="object-contain group-hover:scale-105 transition-transform duration-500"
+                            className="object-contain drop-shadow-lg"
                           />
-                          {/* Animated pin */}
+                          {/* Animated Pin */}
                           <motion.div
-                            initial={{ y: -20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
+                            initial={{ y: -5 }}
+                            animate={{ y: 0 }}
                             transition={{
-                              delay: 0.5 + index * 0.1,
-                              type: "spring",
-                              stiffness: 200,
+                              repeat: Infinity,
+                              repeatType: "reverse",
+                              duration: 1.5,
                             }}
                             className="absolute"
                             style={{
-                              left: product.id === "australia-map" ? "70%" : "55%",
-                              top: product.id === "australia-map" ? "35%" : "25%",
+                              top: product.id === "australia-map" ? "45%" : "35%",
+                              left: product.id === "australia-map" ? "65%" : "55%",
                             }}
                           >
                             <MapPin
-                              size={24}
-                              className="drop-shadow-lg"
+                              size={32}
+                              className="drop-shadow-md"
                               style={{
-                                color: product.id === "australia-map" ? "#0369A1" : "#047857",
-                                fill: product.id === "australia-map" ? "#0369A1" : "#047857",
+                                color:
+                                  product.id === "australia-map"
+                                    ? "#0369A1"
+                                    : "#047857",
+                                fill:
+                                  product.id === "australia-map"
+                                    ? "#0369A1"
+                                    : "#047857",
                               }}
                             />
                           </motion.div>
-                        </div>
+                        </motion.div>
                       ) : product.previewType === "starmap" ? (
                         <div className="relative w-full h-full flex items-center justify-center">
                           {/* Star Map Preview */}
@@ -174,39 +202,98 @@ export default function ProductsPage() {
                                     height: `${1 + Math.random() * 2}px`,
                                     left: `${5 + Math.random() * 90}%`,
                                     top: `${5 + Math.random() * 90}%`,
-                                    boxShadow: "0 0 4px rgba(255,255,255,0.8)",
+                                    boxShadow: "0 0 4px rgba(255,255,255,0.5)",
                                   }}
                                 />
                               ))}
                             </div>
                             {/* Constellation lines */}
-                            <svg className="absolute inset-0 w-full h-full opacity-40">
-                              <line x1="30%" y1="25%" x2="45%" y2="35%" stroke="white" strokeWidth="1" />
-                              <line x1="45%" y1="35%" x2="55%" y2="30%" stroke="white" strokeWidth="1" />
-                              <line x1="55%" y1="30%" x2="70%" y2="40%" stroke="white" strokeWidth="1" />
-                              <line x1="45%" y1="35%" x2="50%" y2="55%" stroke="white" strokeWidth="1" />
-                              <line x1="50%" y1="55%" x2="40%" y2="70%" stroke="white" strokeWidth="1" />
-                              <line x1="50%" y1="55%" x2="60%" y2="70%" stroke="white" strokeWidth="1" />
+                            <svg className="absolute inset-0 w-full h-full">
+                              <line
+                                x1="30%"
+                                y1="25%"
+                                x2="45%"
+                                y2="35%"
+                                stroke="rgba(100,149,237,0.4)"
+                                strokeWidth="1"
+                              />
+                              <line
+                                x1="45%"
+                                y1="35%"
+                                x2="60%"
+                                y2="30%"
+                                stroke="rgba(100,149,237,0.4)"
+                                strokeWidth="1"
+                              />
+                              <line
+                                x1="60%"
+                                y1="30%"
+                                x2="70%"
+                                y2="45%"
+                                stroke="rgba(100,149,237,0.4)"
+                                strokeWidth="1"
+                              />
                             </svg>
-                            {/* Circular border */}
-                            <div className="absolute inset-0 rounded-full border-2 border-white/20" />
                           </div>
-                          {/* Frame effect */}
-                          <div className="absolute inset-8 border-4 border-white/10 rounded-lg pointer-events-none" />
+                        </div>
+                      ) : product.previewType === "moonphase" ? (
+                        <div className="relative w-full h-full flex items-center justify-center">
+                          {/* Moon Phase Preview */}
+                          <div className="relative">
+                            {/* Glow effect */}
+                            <div className="absolute inset-0 w-40 h-40 rounded-full bg-white/10 blur-2xl" />
+                            {/* Moon */}
+                            <motion.div
+                              initial={{ scale: 0.9 }}
+                              animate={{ scale: 1 }}
+                              transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
+                              className="relative w-36 h-36"
+                            >
+                              <svg viewBox="0 0 100 100" className="w-full h-full">
+                                {/* Moon shadow (dark side) */}
+                                <circle cx="50" cy="50" r="45" fill="#1e293b" />
+                                {/* Moon lit portion (waning gibbous) */}
+                                <path
+                                  d="M 50 5 A 20 45 0 0 1 50 95 A 45 45 0 0 1 50 5"
+                                  fill="#f5f5f0"
+                                />
+                                {/* Subtle crater shadows */}
+                                <circle cx="35" cy="35" r="5" fill="rgba(0,0,0,0.06)" />
+                                <circle cx="55" cy="55" r="7" fill="rgba(0,0,0,0.05)" />
+                                <circle cx="40" cy="65" r="4" fill="rgba(0,0,0,0.04)" />
+                              </svg>
+                            </motion.div>
+                            {/* Stars around moon */}
+                            <div className="absolute inset-0 -m-8">
+                              {[...Array(12)].map((_, i) => (
+                                <motion.div
+                                  key={i}
+                                  animate={{ opacity: [0.3, 0.8, 0.3] }}
+                                  transition={{
+                                    duration: 1.5 + Math.random(),
+                                    repeat: Infinity,
+                                    delay: Math.random(),
+                                  }}
+                                  className="absolute w-1 h-1 rounded-full bg-white"
+                                  style={{
+                                    left: `${Math.random() * 100}%`,
+                                    top: `${Math.random() * 100}%`,
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       ) : (
-                        <div className="relative w-full h-full bg-white rounded-xl shadow-lg p-4">
-                          {/* Placeholder for map preview */}
-                          <div className="w-full h-full bg-brand-100 rounded-lg flex items-center justify-center">
-                            <div className="text-center">
-                              <product.icon
-                                size={48}
-                                className="mx-auto text-brand-400 mb-2"
-                              />
-                              <p className="text-xs text-brand-500 uppercase tracking-wide">
-                                Map Preview
-                              </p>
-                            </div>
+                        <div className="w-full h-full bg-brand-100 rounded-lg flex items-center justify-center">
+                          <div className="text-center">
+                            <product.icon
+                              size={48}
+                              className="mx-auto text-brand-400 mb-2"
+                            />
+                            <p className="text-xs text-brand-500 uppercase tracking-wide">
+                              Map Preview
+                            </p>
                           </div>
                         </div>
                       )}
@@ -232,29 +319,36 @@ export default function ProductsPage() {
                       </div>
                     </div>
 
-                    <p className="text-brand-600 mb-6 text-sm">{product.description}</p>
+                    <p className="text-brand-600 mb-6 flex-grow">
+                      {product.description}
+                    </p>
 
-                    {/* Features */}
-                    <ul className="space-y-2 mb-6 flex-grow">
-                      {product.features.map((feature) => (
-                        <li
-                          key={feature}
+                    {/* Features List */}
+                    <div className="grid grid-cols-2 gap-2 mb-6">
+                      {product.features.map((feature, idx) => (
+                        <div
+                          key={idx}
                           className="flex items-center gap-2 text-sm text-brand-700"
                         >
                           <div className="w-1.5 h-1.5 rounded-full bg-brand-400" />
                           {feature}
-                        </li>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
 
                     {/* CTA */}
-                    <Button fullWidth className="group/btn">
-                      Create {product.title}
-                      <ArrowRight
-                        size={18}
-                        className="ml-2 group-hover/btn:translate-x-1 transition-transform"
-                      />
-                    </Button>
+                    <div className="flex items-center justify-between pt-4 border-t border-brand-100">
+                      <span className="text-charcoal font-semibold">
+                        From $59
+                      </span>
+                      <span className="flex items-center gap-1 text-brand-600 group-hover:text-charcoal transition-colors">
+                        Create Now
+                        <ArrowRight
+                          size={16}
+                          className="group-hover:translate-x-1 transition-transform"
+                        />
+                      </span>
+                    </div>
                   </div>
                 </div>
               </Link>
@@ -262,15 +356,23 @@ export default function ProductsPage() {
           ))}
         </div>
 
-        {/* Bottom Note */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="text-center text-brand-500 mt-12"
+        {/* Bottom CTA */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="text-center mt-16"
         >
-          All prints start from $59 AUD and include free delivery in Australia & New Zealand.
-        </motion.p>
+          <p className="text-brand-600 mb-4">
+            Not sure which to choose? Start with our most popular option.
+          </p>
+          <Link href="/create">
+            <Button size="lg">
+              Create Where We Met Print
+              <ArrowRight size={18} className="ml-2" />
+            </Button>
+          </Link>
+        </motion.div>
       </div>
     </div>
   );
