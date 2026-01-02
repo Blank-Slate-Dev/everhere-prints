@@ -1,15 +1,54 @@
 // src/components/create-moonphase/MoonPhasePrintPreview.tsx
 "use client";
 
-import { useEffect, useRef, useMemo } from "react";
+import { useMemo } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { MoonPhaseCustomization, MoonPhaseProductSelection } from "@/types";
 import { getMoonPhaseStyle, MOON_PREVIEW_STARS } from "@/lib/moonPhaseConfig";
-import { calculateMoonPhase, getPhaseAngle } from "@/lib/moonPhaseCalculations";
+import { calculateMoonPhase } from "@/lib/moonPhaseCalculations";
 
 interface MoonPhasePrintPreviewProps {
   customization: MoonPhaseCustomization;
   product: MoonPhaseProductSelection;
+}
+
+/**
+ * Maps moon phase (0-1) to image number (1-24) based on actual image content:
+ * - Image 24: New Moon (phase 0)
+ * - Image 7: First Quarter (phase 0.25)
+ * - Image 12: Full Moon (phase 0.5)
+ * - Image 19: Last Quarter (phase 0.75)
+ * - Image 24: New Moon again (phase 1)
+ */
+function getMoonImageNumber(phase: number): number {
+  // Normalize phase to 0-1 range
+  const p = ((phase % 1) + 1) % 1;
+  
+  // New moon check (phase ~0 or ~1)
+  if (p < 0.02 || p > 0.98) {
+    return 24;
+  }
+  
+  if (p < 0.25) {
+    // New moon (24) → First quarter (7)
+    // Wraps through 1, 2, 3, 4, 5, 6 to 7
+    const t = p / 0.25;
+    const img = 24 + t * 7; // 24 → 31
+    return Math.round(img > 24 ? img - 24 : img);
+  } else if (p < 0.5) {
+    // First quarter (7) → Full moon (12)
+    const t = (p - 0.25) / 0.25;
+    return Math.round(7 + t * 5);
+  } else if (p < 0.75) {
+    // Full moon (12) → Last quarter (19)
+    const t = (p - 0.5) / 0.25;
+    return Math.round(12 + t * 7);
+  } else {
+    // Last quarter (19) → New moon (24)
+    const t = (p - 0.75) / 0.25;
+    return Math.round(19 + t * 5);
+  }
 }
 
 export default function MoonPhasePrintPreview({
@@ -24,10 +63,9 @@ export default function MoonPhasePrintPreview({
 
   // Calculate moon phase for the selected date
   const moonData = useMemo(() => calculateMoonPhase(date), [date]);
-  const { isWaxing, illuminationPercent } = useMemo(
-    () => getPhaseAngle(moonData.phase),
-    [moonData.phase]
-  );
+  
+  // Get the appropriate moon image number (1-24)
+  const moonImageNumber = useMemo(() => getMoonImageNumber(moonData.phase), [moonData.phase]);
 
   // Frame colors matching other products
   const frameColors = {
@@ -106,10 +144,8 @@ export default function MoonPhasePrintPreview({
 
               {/* Center Section - Moon */}
               <div className="flex-1 flex items-center justify-center w-full z-10 py-4">
-                <RealisticMoon
-                  phase={moonData.phase}
-                  isWaxing={isWaxing}
-                  illuminationPercent={illuminationPercent}
+                <MoonImage
+                  imageNumber={moonImageNumber}
                   style={style}
                   showPhaseLabel={showPhaseLabel}
                   phaseName={moonData.phaseName}
@@ -154,120 +190,60 @@ export default function MoonPhasePrintPreview({
   );
 }
 
-// Realistic Moon Component using Canvas
-interface RealisticMoonProps {
-  phase: number;
-  isWaxing: boolean;
-  illuminationPercent: number;
+// Moon Image Component
+interface MoonImageProps {
+  imageNumber: number;
   style: ReturnType<typeof getMoonPhaseStyle>;
   showPhaseLabel: boolean;
   phaseName: string;
 }
 
-function RealisticMoon({
-  phase,
-  isWaxing,
-  illuminationPercent,
+function MoonImage({
+  imageNumber,
   style,
   showPhaseLabel,
   phaseName,
-}: RealisticMoonProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerSize = 240;
-  const moonRadius = 100;
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // High DPI support
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = containerSize * dpr;
-    canvas.height = containerSize * dpr;
-    canvas.style.width = `${containerSize}px`;
-    canvas.style.height = `${containerSize}px`;
-    ctx.scale(dpr, dpr);
-
-    const centerX = containerSize / 2;
-    const centerY = containerSize / 2;
-
-    // Clear canvas
-    ctx.clearRect(0, 0, containerSize, containerSize);
-
-    // Draw outer glow
-    const glowGradient = ctx.createRadialGradient(
-      centerX, centerY, moonRadius * 0.9,
-      centerX, centerY, moonRadius * 1.4
-    );
-    glowGradient.addColorStop(0, style.moonGlowColor);
-    glowGradient.addColorStop(1, "transparent");
-    ctx.fillStyle = glowGradient;
-    ctx.fillRect(0, 0, containerSize, containerSize);
-
-    // Create moon base with realistic coloring
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, moonRadius, 0, Math.PI * 2);
-    ctx.clip();
-
-    // Base moon color - warm gray like real moon
-    const isLightStyle = style.id === "celestial";
-    const baseColor = isLightStyle ? "#2a2a35" : "#d8d4c8";
-    ctx.fillStyle = baseColor;
-    ctx.fillRect(centerX - moonRadius, centerY - moonRadius, moonRadius * 2, moonRadius * 2);
-
-    // Draw maria (dark seas) - based on real lunar maria positions
-    const mariaColor = isLightStyle ? "#1a1a22" : "#8a8880";
-    drawMaria(ctx, centerX, centerY, moonRadius, mariaColor);
-
-    // Draw highland texture
-    drawHighlandTexture(ctx, centerX, centerY, moonRadius, isLightStyle);
-
-    // Draw craters
-    const craterColor = isLightStyle ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)";
-    const craterHighlight = isLightStyle ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.15)";
-    drawCraters(ctx, centerX, centerY, moonRadius, craterColor, craterHighlight);
-
-    // Draw crater rays (Tycho, Copernicus)
-    drawCraterRays(ctx, centerX, centerY, moonRadius, isLightStyle);
-
-    // Apply limb darkening for 3D effect
-    const limbGradient = ctx.createRadialGradient(
-      centerX, centerY, moonRadius * 0.5,
-      centerX, centerY, moonRadius
-    );
-    limbGradient.addColorStop(0, "transparent");
-    limbGradient.addColorStop(0.7, "transparent");
-    limbGradient.addColorStop(1, isLightStyle ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.2)");
-    ctx.fillStyle = limbGradient;
-    ctx.fillRect(centerX - moonRadius, centerY - moonRadius, moonRadius * 2, moonRadius * 2);
-
-    ctx.restore();
-
-    // Draw phase shadow
-    if (illuminationPercent < 100) {
-      drawPhaseShadow(ctx, centerX, centerY, moonRadius, phase, isWaxing, illuminationPercent, style);
-    }
-
-    // Draw subtle rim highlight
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, moonRadius - 0.5, 0, Math.PI * 2);
-    ctx.strokeStyle = isLightStyle ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.08)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-  }, [phase, isWaxing, illuminationPercent, style, containerSize, moonRadius]);
+}: MoonImageProps) {
+  const size = 200; // Display size in pixels
+  const isLightStyle = style.id === "celestial";
 
   return (
     <div className="relative">
-      <canvas
-        ref={canvasRef}
+      {/* Glow Effect */}
+      <div
+        className="absolute inset-0 rounded-full blur-2xl"
         style={{
-          width: containerSize,
-          height: containerSize,
+          backgroundColor: style.moonGlowColor,
+          transform: "scale(1.3)",
+          opacity: 0.6,
+        }}
+      />
+
+      {/* Moon Image Container */}
+      <div
+        className="relative rounded-full overflow-hidden"
+        style={{
+          width: size,
+          height: size,
+          // Apply filter for light style (inverted moon)
+          filter: isLightStyle ? "invert(1) brightness(0.9)" : "none",
+        }}
+      >
+        <Image
+          src={`/moon${imageNumber}.png`}
+          alt={phaseName}
+          width={512}
+          height={512}
+          className="w-full h-full object-cover"
+          priority
+        />
+      </div>
+
+      {/* Subtle rim glow */}
+      <div
+        className="absolute inset-0 rounded-full pointer-events-none"
+        style={{
+          boxShadow: `inset 0 0 20px ${style.moonGlowColor}`,
         }}
       />
 
@@ -276,7 +252,7 @@ function RealisticMoon({
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap"
+          className="absolute -bottom-10 left-1/2 transform -translate-x-1/2 whitespace-nowrap"
         >
           <p
             className="text-xs sm:text-sm tracking-widest uppercase"
@@ -288,278 +264,4 @@ function RealisticMoon({
       )}
     </div>
   );
-}
-
-// Draw lunar maria (the dark "seas")
-function drawMaria(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  radius: number,
-  color: string
-) {
-  ctx.fillStyle = color;
-
-  // Mare Tranquillitatis (Sea of Tranquility) - right side
-  ctx.beginPath();
-  ctx.ellipse(cx + radius * 0.25, cy - radius * 0.1, radius * 0.25, radius * 0.2, 0.3, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Mare Serenitatis (Sea of Serenity) - upper right
-  ctx.beginPath();
-  ctx.ellipse(cx + radius * 0.15, cy - radius * 0.35, radius * 0.2, radius * 0.18, -0.2, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Mare Imbrium (Sea of Rains) - upper left, largest
-  ctx.beginPath();
-  ctx.ellipse(cx - radius * 0.2, cy - radius * 0.25, radius * 0.35, radius * 0.28, 0.1, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Mare Nubium (Sea of Clouds) - lower left
-  ctx.beginPath();
-  ctx.ellipse(cx - radius * 0.15, cy + radius * 0.35, radius * 0.22, radius * 0.15, 0.2, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Mare Frigoris (Sea of Cold) - top
-  ctx.beginPath();
-  ctx.ellipse(cx, cy - radius * 0.6, radius * 0.4, radius * 0.1, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Oceanus Procellarum (Ocean of Storms) - left side, very large
-  ctx.beginPath();
-  ctx.ellipse(cx - radius * 0.4, cy, radius * 0.25, radius * 0.45, 0.15, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Mare Crisium (Sea of Crises) - right edge, isolated
-  ctx.beginPath();
-  ctx.ellipse(cx + radius * 0.55, cy - radius * 0.2, radius * 0.12, radius * 0.1, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Mare Fecunditatis (Sea of Fertility) - lower right
-  ctx.beginPath();
-  ctx.ellipse(cx + radius * 0.4, cy + radius * 0.2, radius * 0.18, radius * 0.15, -0.3, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-// Draw highland texture
-function drawHighlandTexture(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  radius: number,
-  isLightStyle: boolean
-) {
-  // Add subtle noise texture to highlands
-  const textureColor = isLightStyle ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.05)";
-  
-  for (let i = 0; i < 200; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const dist = Math.random() * radius * 0.95;
-    const x = cx + Math.cos(angle) * dist;
-    const y = cy + Math.sin(angle) * dist;
-    const size = Math.random() * 3 + 1;
-    
-    ctx.beginPath();
-    ctx.arc(x, y, size, 0, Math.PI * 2);
-    ctx.fillStyle = textureColor;
-    ctx.fill();
-  }
-}
-
-// Draw craters
-function drawCraters(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  radius: number,
-  shadowColor: string,
-  highlightColor: string
-) {
-  // Major craters with positions based on real lunar geography
-  const craters = [
-    // Tycho - prominent crater in southern highlands
-    { x: 0, y: 0.65, size: 0.08, prominent: true },
-    // Copernicus - prominent crater with rays
-    { x: -0.25, y: 0.05, size: 0.07, prominent: true },
-    // Kepler
-    { x: -0.5, y: 0, size: 0.04, prominent: false },
-    // Aristarchus - very bright
-    { x: -0.55, y: -0.25, size: 0.035, prominent: true },
-    // Plato - dark floor
-    { x: -0.05, y: -0.55, size: 0.06, prominent: false },
-    // Various smaller craters
-    { x: 0.3, y: 0.4, size: 0.03, prominent: false },
-    { x: -0.35, y: 0.45, size: 0.025, prominent: false },
-    { x: 0.45, y: -0.3, size: 0.03, prominent: false },
-    { x: 0.2, y: -0.5, size: 0.025, prominent: false },
-    { x: -0.4, y: -0.4, size: 0.035, prominent: false },
-    { x: 0.5, y: 0.1, size: 0.02, prominent: false },
-    { x: -0.15, y: 0.5, size: 0.025, prominent: false },
-    { x: 0.35, y: -0.15, size: 0.02, prominent: false },
-    { x: -0.3, y: 0.2, size: 0.02, prominent: false },
-    { x: 0.1, y: 0.3, size: 0.018, prominent: false },
-  ];
-
-  craters.forEach((crater) => {
-    const craterX = cx + crater.x * radius;
-    const craterY = cy + crater.y * radius;
-    const craterRadius = crater.size * radius;
-
-    // Crater shadow (gives depth)
-    ctx.beginPath();
-    ctx.arc(craterX, craterY, craterRadius, 0, Math.PI * 2);
-    ctx.fillStyle = shadowColor;
-    ctx.fill();
-
-    // Crater rim highlight (subtle)
-    if (crater.prominent) {
-      ctx.beginPath();
-      ctx.arc(craterX - craterRadius * 0.2, craterY - craterRadius * 0.2, craterRadius * 0.9, 0, Math.PI * 2);
-      ctx.strokeStyle = highlightColor;
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
-  });
-}
-
-// Draw crater rays (bright ejecta patterns)
-function drawCraterRays(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  radius: number,
-  isLightStyle: boolean
-) {
-  const rayColor = isLightStyle ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.08)";
-  
-  // Tycho rays - most prominent ray system on the Moon
-  const tychoX = cx;
-  const tychoY = cy + radius * 0.65;
-  
-  ctx.strokeStyle = rayColor;
-  ctx.lineWidth = 2;
-  
-  for (let i = 0; i < 12; i++) {
-    const angle = (i / 12) * Math.PI * 2 - Math.PI / 2;
-    const rayLength = radius * (0.5 + Math.random() * 0.4);
-    
-    ctx.beginPath();
-    ctx.moveTo(tychoX, tychoY);
-    ctx.lineTo(
-      tychoX + Math.cos(angle) * rayLength,
-      tychoY + Math.sin(angle) * rayLength * 0.8
-    );
-    ctx.stroke();
-  }
-
-  // Copernicus rays
-  const copX = cx - radius * 0.25;
-  const copY = cy + radius * 0.05;
-  
-  ctx.lineWidth = 1.5;
-  
-  for (let i = 0; i < 8; i++) {
-    const angle = (i / 8) * Math.PI * 2;
-    const rayLength = radius * (0.2 + Math.random() * 0.2);
-    
-    ctx.beginPath();
-    ctx.moveTo(copX, copY);
-    ctx.lineTo(
-      copX + Math.cos(angle) * rayLength,
-      copY + Math.sin(angle) * rayLength
-    );
-    ctx.stroke();
-  }
-}
-
-// Draw phase shadow with soft terminator
-function drawPhaseShadow(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  radius: number,
-  phase: number,
-  isWaxing: boolean,
-  illuminationPercent: number,
-  style: ReturnType<typeof getMoonPhaseStyle>
-) {
-  ctx.save();
-
-  // Clip to moon circle
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.clip();
-
-  if (illuminationPercent <= 0) {
-    // New moon - all shadow
-    ctx.fillStyle = style.moonShadowColor;
-    ctx.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
-    ctx.restore();
-    return;
-  }
-
-  if (illuminationPercent < 50) {
-    // Less than half lit - shadow covers most of the moon
-    if (isWaxing) {
-      // Waxing crescent - lit on right, shadow on left
-      const litWidth = (illuminationPercent / 50) * radius;
-      
-      // Draw shadow from left edge to terminator
-      const gradient = ctx.createLinearGradient(
-        cx - radius, cy,
-        cx + radius - litWidth, cy
-      );
-      gradient.addColorStop(0, style.moonShadowColor);
-      gradient.addColorStop(0.85, style.moonShadowColor);
-      gradient.addColorStop(1, "transparent");
-      
-      ctx.fillStyle = gradient;
-      ctx.fillRect(cx - radius, cy - radius, radius * 2 - litWidth + radius * 0.1, radius * 2);
-    } else {
-      // Waning crescent - lit on left, shadow on right
-      const litWidth = (illuminationPercent / 50) * radius;
-      
-      const gradient = ctx.createLinearGradient(
-        cx + radius, cy,
-        cx - radius + litWidth, cy
-      );
-      gradient.addColorStop(0, style.moonShadowColor);
-      gradient.addColorStop(0.85, style.moonShadowColor);
-      gradient.addColorStop(1, "transparent");
-      
-      ctx.fillStyle = gradient;
-      ctx.fillRect(cx - radius + litWidth - radius * 0.1, cy - radius, radius * 2 - litWidth + radius * 0.1, radius * 2);
-    }
-  } else {
-    // More than half lit - shadow covers less than half
-    const shadowWidth = ((100 - illuminationPercent) / 50) * radius;
-    
-    if (isWaxing) {
-      // Waxing gibbous - small shadow on left
-      const gradient = ctx.createLinearGradient(
-        cx - radius, cy,
-        cx - radius + shadowWidth * 2, cy
-      );
-      gradient.addColorStop(0, style.moonShadowColor);
-      gradient.addColorStop(0.7, style.moonShadowColor);
-      gradient.addColorStop(1, "transparent");
-      
-      ctx.fillStyle = gradient;
-      ctx.fillRect(cx - radius, cy - radius, shadowWidth * 2 + radius * 0.15, radius * 2);
-    } else {
-      // Waning gibbous - small shadow on right
-      const gradient = ctx.createLinearGradient(
-        cx + radius, cy,
-        cx + radius - shadowWidth * 2, cy
-      );
-      gradient.addColorStop(0, style.moonShadowColor);
-      gradient.addColorStop(0.7, style.moonShadowColor);
-      gradient.addColorStop(1, "transparent");
-      
-      ctx.fillStyle = gradient;
-      ctx.fillRect(cx + radius - shadowWidth * 2 - radius * 0.15, cy - radius, shadowWidth * 2 + radius * 0.15, radius * 2);
-    }
-  }
-
-  ctx.restore();
 }

@@ -1,11 +1,12 @@
 // src/components/create-moonphase/MoonPhaseMiniPreview.tsx
 "use client";
 
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { MoonPhaseCustomization, MoonPhaseProductSelection } from "@/types";
 import { getMoonPhaseStyle } from "@/lib/moonPhaseConfig";
-import { calculateMoonPhase, getPhaseAngle } from "@/lib/moonPhaseCalculations";
+import { calculateMoonPhase } from "@/lib/moonPhaseCalculations";
 import { calculateTotal, formatPrice } from "@/lib/pricing";
 import { ChevronUp } from "lucide-react";
 
@@ -13,6 +14,33 @@ interface MoonPhaseMiniPreviewProps {
   customization: MoonPhaseCustomization;
   product: MoonPhaseProductSelection;
   onTap: () => void;
+}
+
+/**
+ * Maps moon phase (0-1) to image number (1-24)
+ * Image 24 = New Moon, Image 12 = Full Moon
+ */
+function getMoonImageNumber(phase: number): number {
+  const p = ((phase % 1) + 1) % 1;
+  
+  if (p < 0.02 || p > 0.98) {
+    return 24;
+  }
+  
+  if (p < 0.25) {
+    const t = p / 0.25;
+    const img = 24 + t * 7;
+    return Math.round(img > 24 ? img - 24 : img);
+  } else if (p < 0.5) {
+    const t = (p - 0.25) / 0.25;
+    return Math.round(7 + t * 5);
+  } else if (p < 0.75) {
+    const t = (p - 0.5) / 0.25;
+    return Math.round(12 + t * 7);
+  } else {
+    const t = (p - 0.75) / 0.25;
+    return Math.round(19 + t * 5);
+  }
 }
 
 export default function MoonPhaseMiniPreview({
@@ -28,10 +56,12 @@ export default function MoonPhaseMiniPreview({
     [customization.date]
   );
 
-  const { isWaxing, illuminationPercent } = useMemo(
-    () => getPhaseAngle(moonData.phase),
+  const moonImageNumber = useMemo(
+    () => getMoonImageNumber(moonData.phase),
     [moonData.phase]
   );
+
+  const isLightStyle = style.id === "celestial";
 
   return (
     <motion.div
@@ -50,11 +80,20 @@ export default function MoonPhaseMiniPreview({
             className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center"
             style={{ backgroundColor: style.backgroundColor }}
           >
-            <MiniMoon
-              isWaxing={isWaxing}
-              illuminationPercent={illuminationPercent}
-              isLightStyle={style.id === "celestial"}
-            />
+            <div
+              className="relative w-8 h-8 rounded-full overflow-hidden"
+              style={{
+                filter: isLightStyle ? "invert(1) brightness(0.9)" : "none",
+              }}
+            >
+              <Image
+                src={`/moon${moonImageNumber}.png`}
+                alt={moonData.phaseName}
+                width={64}
+                height={64}
+                className="w-full h-full object-cover"
+              />
+            </div>
           </div>
 
           {/* Info */}
@@ -77,104 +116,5 @@ export default function MoonPhaseMiniPreview({
         </button>
       </div>
     </motion.div>
-  );
-}
-
-// Simplified Mini Moon Component using Canvas
-interface MiniMoonProps {
-  isWaxing: boolean;
-  illuminationPercent: number;
-  isLightStyle: boolean;
-}
-
-function MiniMoon({ isWaxing, illuminationPercent, isLightStyle }: MiniMoonProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const size = 32;
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    canvas.style.width = `${size}px`;
-    canvas.style.height = `${size}px`;
-    ctx.scale(dpr, dpr);
-
-    const cx = size / 2;
-    const cy = size / 2;
-    const radius = 12;
-
-    ctx.clearRect(0, 0, size, size);
-
-    // Draw base moon
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-    ctx.clip();
-
-    // Base color
-    const baseColor = isLightStyle ? "#2a2a35" : "#d8d4c8";
-    ctx.fillStyle = baseColor;
-    ctx.fillRect(0, 0, size, size);
-
-    // Simple maria
-    const mariaColor = isLightStyle ? "#1a1a22" : "#9a9890";
-    ctx.fillStyle = mariaColor;
-    ctx.beginPath();
-    ctx.ellipse(cx - radius * 0.2, cy - radius * 0.2, radius * 0.3, radius * 0.25, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(cx + radius * 0.2, cy - radius * 0.05, radius * 0.2, radius * 0.15, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(cx - radius * 0.35, cy + radius * 0.1, radius * 0.2, radius * 0.35, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
-
-    // Draw phase shadow
-    if (illuminationPercent < 100) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-      ctx.clip();
-
-      const shadowColor = isLightStyle ? "#faf8f5" : "#0a1628";
-
-      if (illuminationPercent < 50) {
-        const litWidth = (illuminationPercent / 50) * radius;
-        if (isWaxing) {
-          ctx.fillStyle = shadowColor;
-          ctx.fillRect(0, 0, cx + radius - litWidth, size);
-        } else {
-          ctx.fillStyle = shadowColor;
-          ctx.fillRect(cx - radius + litWidth, 0, size, size);
-        }
-      } else {
-        const shadowWidth = ((100 - illuminationPercent) / 50) * radius;
-        if (isWaxing) {
-          ctx.fillStyle = shadowColor;
-          ctx.fillRect(0, 0, cx - radius + shadowWidth * 2, size);
-        } else {
-          ctx.fillStyle = shadowColor;
-          ctx.fillRect(cx + radius - shadowWidth * 2, 0, size, size);
-        }
-      }
-
-      ctx.restore();
-    }
-
-  }, [isWaxing, illuminationPercent, isLightStyle]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{ width: size, height: size }}
-    />
   );
 }
