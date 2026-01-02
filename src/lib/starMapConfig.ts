@@ -42,7 +42,7 @@ export const starMapStyles: StarMapStyle[] = [
     starColor: "#ffffff",
     starGlowColor: "rgba(255, 255, 255, 0.4)",
     constellationLineColor: "rgba(255, 215, 0, 0.35)",
-    constellationNameColor: "rgba(253, 230, 138, 0.85)",
+    constellationNameColor: "#ffffff",
     gridColor: "rgba(255, 255, 255, 0.06)",
     horizonColor: "rgba(255, 255, 255, 0.12)",
     textColor: "#ffffff",
@@ -70,14 +70,14 @@ export const starMapStyles: StarMapStyle[] = [
     description: "Warm ivory elegance",
     backgroundColor: "#faf8f5",
     starColor: "#1a1a2e",
-    starGlowColor: "rgba(26, 26, 46, 0.2)",
-    constellationLineColor: "rgba(26, 26, 46, 0.25)",
-    constellationNameColor: "rgba(75, 65, 55, 0.7)",
-    gridColor: "rgba(26, 26, 46, 0.08)",
-    horizonColor: "rgba(26, 26, 46, 0.15)",
+    starGlowColor: "rgba(26, 26, 46, 0.35)",
+    constellationLineColor: "rgba(26, 26, 46, 0.45)",
+    constellationNameColor: "rgba(60, 50, 45, 0.85)",
+    gridColor: "rgba(26, 26, 46, 0.15)",
+    horizonColor: "rgba(26, 26, 46, 0.30)",
     textColor: "#1a1a2e",
-    accentColor: "#6b5b4f",
-    milkyWayColor: "rgba(26, 26, 46, 0.03)",
+    accentColor: "#5a4a3f",
+    milkyWayColor: "rgba(180, 160, 140, 0.08)",
   },
 ];
 
@@ -86,7 +86,7 @@ export function getStarMapStyle(styleId: string): StarMapStyle {
 }
 
 // ============================================================================
-// CONSTELLATION DATA - 42 Major Constellations
+// CONSTELLATION DATA - 68 Constellations (Major + Extended Coverage)
 // Each line segment: [ra1 (hours), dec1 (deg), ra2 (hours), dec2 (deg)]
 // ============================================================================
 export interface Constellation {
@@ -593,6 +593,249 @@ export const constellations: Constellation[] = [
       [15.940, 4.478, 15.769, 6.426],
       [18.355, -2.899, 18.937, 4.203],
       [18.937, 4.203, 17.626, -12.875],
+    ],
+  },
+  // ============================================================================
+  // ADDITIONAL CONSTELLATIONS - Extended coverage
+  // ============================================================================
+  {
+    name: "Auriga",
+    abbreviation: "Aur",
+    lines: [
+      [5.278, 45.998, 5.992, 44.947], // Capella to Menkalinan
+      [5.992, 44.947, 5.995, 37.213], // Menkalinan to Theta
+      [5.995, 37.213, 5.108, 41.234], // Theta to Iota
+      [5.108, 41.234, 5.278, 45.998], // Iota back to Capella
+      [5.278, 45.998, 4.950, 33.166], // Capella to El Nath (shared with Taurus)
+    ],
+  },
+  {
+    name: "Carina",
+    abbreviation: "Car",
+    lines: [
+      [6.399, -52.696, 8.375, -59.510], // Canopus to Avior
+      [8.375, -59.510, 9.220, -69.717], // Avior to Miaplacidus
+      [9.220, -69.717, 10.229, -70.038], // Miaplacidus to Theta
+      [9.285, -59.275, 8.375, -59.510], // Iota to Avior
+    ],
+  },
+  {
+    name: "Vela",
+    abbreviation: "Vel",
+    lines: [
+      [8.159, -47.337, 8.745, -54.709], // Gamma to Kappa
+      [8.745, -54.709, 9.133, -43.433], // Kappa to Delta
+      [9.133, -43.433, 9.368, -55.011], // Delta to Lambda
+      [9.368, -55.011, 8.745, -54.709], // Lambda to Kappa
+      [8.159, -47.337, 9.133, -43.433], // Gamma to Delta
+    ],
+  },
+  {
+    name: "Puppis",
+    abbreviation: "Pup",
+    lines: [
+      [8.059, -40.003, 7.822, -24.860], // Zeta to Pi
+      [7.822, -24.860, 7.286, -37.097], // Pi to Nu
+      [7.286, -37.097, 8.059, -40.003], // Nu to Zeta
+      [7.286, -37.097, 6.833, -50.615], // Nu to Tau
+    ],
+  },
+  {
+    name: "Columba",
+    abbreviation: "Col",
+    lines: [
+      [5.660, -34.074, 5.958, -35.768], // Alpha to Beta
+      [5.958, -35.768, 6.369, -33.436], // Beta to Delta
+      [5.660, -34.074, 5.520, -35.471], // Alpha to Epsilon
+      [5.520, -35.471, 5.985, -42.815], // Epsilon to Eta
+    ],
+  },
+  {
+    name: "Delphinus",
+    abbreviation: "Del",
+    lines: [
+      [20.626, 14.595, 20.554, 11.303], // Alpha to Beta
+      [20.554, 11.303, 20.724, 15.912], // Beta to Gamma
+      [20.724, 15.912, 20.777, 15.074], // Gamma to Delta
+      [20.777, 15.074, 20.626, 14.595], // Delta to Alpha
+      [20.626, 14.595, 20.660, 16.124], // Alpha to Epsilon
+    ],
+  },
+  {
+    name: "Sagitta",
+    abbreviation: "Sge",
+    lines: [
+      [19.668, 18.014, 19.790, 18.534], // Alpha to Beta
+      [19.790, 18.534, 19.979, 19.492], // Beta to Gamma
+      [19.979, 19.492, 19.789, 18.534], // Gamma back
+      [19.668, 18.014, 19.790, 19.492], // Arrow shaft
+    ],
+  },
+  {
+    name: "Vulpecula",
+    abbreviation: "Vul",
+    lines: [
+      [19.478, 24.665, 19.891, 21.390], // Alpha to 13 Vul
+      [19.891, 21.390, 20.128, 23.780], // line segment
+    ],
+  },
+  {
+    name: "Scutum",
+    abbreviation: "Sct",
+    lines: [
+      [18.587, -8.244, 18.786, -4.748], // Alpha to Beta
+      [18.786, -4.748, 18.486, -14.566], // Beta to Delta
+      [18.486, -14.566, 18.587, -8.244], // Delta to Alpha
+    ],
+  },
+  {
+    name: "Monoceros",
+    abbreviation: "Mon",
+    lines: [
+      [7.687, -9.551, 8.143, -2.984], // Alpha to Delta
+      [8.143, -2.984, 6.480, -7.033], // Delta to Beta
+      [6.480, -7.033, 7.687, -9.551], // Beta to Alpha
+    ],
+  },
+  {
+    name: "Ara",
+    abbreviation: "Ara",
+    lines: [
+      [17.531, -49.876, 17.423, -55.530], // Alpha to Beta
+      [17.423, -55.530, 16.993, -53.160], // Beta to Gamma
+      [16.993, -53.160, 16.830, -59.041], // Gamma to Delta
+      [17.531, -49.876, 17.422, -46.506], // Alpha to Zeta
+    ],
+  },
+  {
+    name: "Corona Australis",
+    abbreviation: "CrA",
+    lines: [
+      [19.158, -37.905, 19.107, -37.063], // Alpha to Beta
+      [19.107, -37.063, 19.167, -40.497], // Beta to Gamma
+      [19.167, -40.497, 18.979, -43.681], // Gamma to Delta
+      [19.158, -37.905, 18.813, -43.432], // Alpha connects
+    ],
+  },
+  {
+    name: "Pavo",
+    abbreviation: "Pav",
+    lines: [
+      [20.427, -56.735, 20.010, -66.203], // Alpha (Peacock) to Beta
+      [20.010, -66.203, 18.717, -71.428], // Beta to Delta
+      [18.717, -71.428, 17.762, -64.724], // Delta to Eta
+      [17.762, -64.724, 20.427, -56.735], // Eta back to Alpha
+    ],
+  },
+  {
+    name: "Tucana",
+    abbreviation: "Tuc",
+    lines: [
+      [22.309, -60.260, 23.290, -58.236], // Alpha to Beta
+      [23.290, -58.236, 0.526, -62.958], // Beta to Zeta
+      [0.526, -62.958, 22.309, -60.260], // Zeta to Alpha
+    ],
+  },
+  {
+    name: "Indus",
+    abbreviation: "Ind",
+    lines: [
+      [20.626, -47.292, 20.913, -58.454], // Alpha to Beta
+      [20.913, -58.454, 21.331, -53.449], // Beta to Theta
+      [21.331, -53.449, 20.626, -47.292], // Theta to Alpha
+    ],
+  },
+  {
+    name: "Sculptor",
+    abbreviation: "Scl",
+    lines: [
+      [0.977, -29.358, 23.814, -28.130], // Alpha to Beta
+      [23.814, -28.130, 23.312, -32.532], // Beta to Gamma
+      [23.312, -32.532, 0.977, -29.358], // Gamma to Alpha
+    ],
+  },
+  {
+    name: "Fornax",
+    abbreviation: "For",
+    lines: [
+      [3.201, -28.987, 2.818, -32.406], // Alpha to Beta
+      [2.818, -32.406, 3.005, -24.015], // Beta to Nu
+    ],
+  },
+  {
+    name: "Lupus",
+    abbreviation: "Lup",
+    lines: [
+      [14.699, -47.388, 15.356, -40.648], // Alpha to Beta
+      [15.356, -40.648, 15.585, -41.167], // Beta to Gamma
+      [15.585, -41.167, 15.378, -44.690], // Gamma to Epsilon
+      [15.378, -44.690, 14.699, -47.388], // Epsilon to Alpha
+      [15.585, -41.167, 16.002, -38.397], // Gamma to Zeta
+    ],
+  },
+  {
+    name: "Canes Venatici",
+    abbreviation: "CVn",
+    lines: [
+      [12.934, 38.318, 12.562, 41.357], // Cor Caroli to Chara
+    ],
+  },
+  {
+    name: "Coma Berenices",
+    abbreviation: "Com",
+    lines: [
+      [13.166, 17.529, 12.449, 28.268], // Alpha to Beta
+      [12.449, 28.268, 12.266, 26.099], // Beta to Gamma
+    ],
+  },
+  {
+    name: "Sextans",
+    abbreviation: "Sex",
+    lines: [
+      [10.132, -0.372, 10.505, -0.637], // Alpha to Beta
+      [10.505, -0.637, 9.875, -8.106], // Beta to Gamma
+    ],
+  },
+  {
+    name: "Antlia",
+    abbreviation: "Ant",
+    lines: [
+      [10.453, -31.068, 9.487, -35.951], // Alpha to Iota
+      [9.487, -35.951, 10.945, -37.138], // Iota to Epsilon
+    ],
+  },
+  {
+    name: "Pyxis",
+    abbreviation: "Pyx",
+    lines: [
+      [8.727, -33.186, 8.842, -27.710], // Alpha to Beta
+      [8.842, -27.710, 8.923, -25.858], // Beta to Gamma
+    ],
+  },
+  {
+    name: "Musca",
+    abbreviation: "Mus",
+    lines: [
+      [12.620, -69.136, 12.465, -68.108], // Alpha to Beta
+      [12.465, -68.108, 12.541, -72.133], // Beta to Delta
+      [12.541, -72.133, 13.038, -71.549], // Delta to Lambda
+      [12.620, -69.136, 12.871, -67.961], // Alpha to Gamma
+    ],
+  },
+  {
+    name: "Circinus",
+    abbreviation: "Cir",
+    lines: [
+      [14.709, -64.975, 15.389, -59.321], // Alpha to Beta
+      [15.389, -59.321, 15.292, -63.612], // Beta to Gamma
+    ],
+  },
+  {
+    name: "Norma",
+    abbreviation: "Nor",
+    lines: [
+      [16.454, -47.555, 16.330, -50.156], // Gamma to Epsilon
+      [16.330, -50.156, 16.054, -49.230], // Epsilon to Eta
     ],
   },
 ];

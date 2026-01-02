@@ -112,16 +112,21 @@ function projectToCanvas(
 }
 
 // Magnitude to visual radius (print-quality scaling)
-function getMagnitudeRadius(magnitude: number, canvasWidth: number): number {
+function getMagnitudeRadius(magnitude: number, canvasWidth: number, styleId?: string): number {
   // Scale factor based on canvas size (preview vs print)
-  const scaleFactor = canvasWidth < 900 ? 1.0 : 1.3;
+  let scaleFactor = canvasWidth < 900 ? 1.0 : 1.3;
+  
+  // Boost size for celestial style (light background needs bigger stars to pop)
+  if (styleId === "celestial") {
+    scaleFactor *= 1.25;
+  }
   
   // Brighter stars (lower magnitude) get larger radius
   // Mag range: roughly -1.5 (Sirius) to 6.5 (naked eye limit)
   const t = clamp((6.5 - magnitude) / 8, 0, 1);
   const base = lerp(0.3, 4.5, Math.pow(t, 1.5));
   
-  return clamp(base * scaleFactor, 0.25, 6);
+  return clamp(base * scaleFactor, 0.25, 7);
 }
 
 // Get star color based on temperature and style
@@ -130,9 +135,22 @@ function getStarColor(
   tempK: number | undefined,
   magnitude: number
 ): string {
-  // For light backgrounds, use dark star color
+  // For light backgrounds (celestial), use rich dark colors with variation
   if (style.id === "celestial") {
-    return style.starColor;
+    // Base dark color with temperature-based tinting for visual interest
+    if (tempK) {
+      // Hot stars (>8000K): dark blue-grey
+      // Medium stars (5000-8000K): dark charcoal
+      // Cool stars (<5000K): dark brown-grey
+      if (tempK > 8000) {
+        return "#1a1a2e"; // Dark navy
+      } else if (tempK > 5000) {
+        return "#1f1f1f"; // Rich charcoal
+      } else {
+        return "#2a2520"; // Dark warm brown
+      }
+    }
+    return "#1a1a2e"; // Default dark
   }
 
   // No temperature data - use style's default star color
@@ -223,8 +241,11 @@ export function renderStarMap(
   ctx.fillStyle = style.backgroundColor;
   ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-  // --- Premium vignette (outside circle) ---
-  {
+  // Check if this is a light style (celestial)
+  const isLightStyle = styleId === "celestial";
+
+  // --- Premium vignette (outside circle) - skip for light styles ---
+  if (!isLightStyle) {
     const vg = ctx.createRadialGradient(
       centerX,
       centerY,
@@ -248,8 +269,8 @@ export function renderStarMap(
   ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
   ctx.clip();
 
-  // --- Atmosphere falloff (toward horizon) ---
-  {
+  // --- Atmosphere falloff (toward horizon) - different for light styles ---
+  if (!isLightStyle) {
     const atm = ctx.createRadialGradient(
       centerX,
       centerY,
@@ -262,6 +283,23 @@ export function renderStarMap(
     atm.addColorStop(1, "rgba(0,0,0,0.28)");
     ctx.save();
     ctx.globalAlpha = 0.8;
+    ctx.fillStyle = atm;
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    ctx.restore();
+  } else {
+    // Light style: subtle warm edge glow
+    const atm = ctx.createRadialGradient(
+      centerX,
+      centerY,
+      radius * 0.5,
+      centerX,
+      centerY,
+      radius
+    );
+    atm.addColorStop(0, "transparent");
+    atm.addColorStop(1, "rgba(200, 180, 160, 0.15)");
+    ctx.save();
+    ctx.globalAlpha = 0.6;
     ctx.fillStyle = atm;
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     ctx.restore();
@@ -388,8 +426,8 @@ export function renderStarMap(
   if (showConstellations) {
     ctx.save();
     ctx.strokeStyle = style.constellationLineColor;
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = isLightStyle ? 1.2 : 1; // Slightly thicker for light style
+    ctx.globalAlpha = isLightStyle ? 1.0 : 0.85; // Full opacity for light style
 
     for (const constellation of constellations) {
       for (const line of constellation.lines) {
@@ -439,7 +477,7 @@ export function renderStarMap(
   const sortedStars = [...starPositions].sort((a, b) => b.magnitude - a.magnitude);
 
   for (const star of sortedStars) {
-    const starRadius = getMagnitudeRadius(star.magnitude, canvasWidth);
+    const starRadius = getMagnitudeRadius(star.magnitude, canvasWidth, styleId);
 
     // Fade stars near the horizon (atmospheric extinction)
     const horizonFade = clamp((star.altitude + 10) / 35, 0.15, 1);
@@ -460,9 +498,16 @@ export function renderStarMap(
         star.x, star.y, glowRadius
       );
 
-      // Use star's actual color for glow
-      gradient.addColorStop(0, style.starGlowColor);
-      gradient.addColorStop(1, "transparent");
+      // Use appropriate glow color based on style
+      if (styleId === "celestial") {
+        // Dark glow for light background
+        gradient.addColorStop(0, "rgba(26, 26, 46, 0.4)");
+        gradient.addColorStop(0.5, "rgba(26, 26, 46, 0.15)");
+        gradient.addColorStop(1, "transparent");
+      } else {
+        gradient.addColorStop(0, style.starGlowColor);
+        gradient.addColorStop(1, "transparent");
+      }
 
       ctx.save();
       ctx.globalAlpha = horizonFade * lerp(0.15, 0.65, glowIntensity);
@@ -485,7 +530,7 @@ export function renderStarMap(
 
   // --- Draw constellation names ---
   if (showConstellationNames) {
-    const fontSize = Math.max(9, canvasWidth / 55);
+    const fontSize = Math.max(7, canvasWidth / 75);
     const letterSpacing = fontSize * 0.15;
 
     for (const constellation of constellations) {
@@ -517,6 +562,17 @@ export function renderStarMap(
         const labelX = sumX / count;
         const labelY = sumY / count - fontSize * 1.2;
 
+        // Check if label is too close to edge - skip if it would conflict with circle
+        const distFromCenter = Math.sqrt(
+          Math.pow(labelX - centerX, 2) + Math.pow(labelY - centerY, 2)
+        );
+        const edgePadding = fontSize * 2.5; // Padding from edge for text
+        
+        // Skip rendering if label center is too close to or beyond the circle edge
+        if (distFromCenter > radius - edgePadding) {
+          continue;
+        }
+
         const altitudeFade = Math.min(1, Math.max(0.3, (minAltitude + 10) / 40));
 
         const displayName = constellation.name.toUpperCase();
@@ -543,7 +599,7 @@ export function renderStarMap(
 
         // Main text
         ctx.save();
-        ctx.globalAlpha = altitudeFade * 0.85;
+        ctx.globalAlpha = isLightStyle ? altitudeFade * 1.0 : altitudeFade * 0.85;
         ctx.fillStyle = style.constellationNameColor;
         ctx.font = `300 ${fontSize}px "Helvetica Neue", "Inter", Arial, sans-serif`;
         drawSpacedText(ctx, displayName, labelX - totalWidth / 2, labelY, letterSpacing);
@@ -553,8 +609,8 @@ export function renderStarMap(
   }
 
   // --- Draw horizon circle ---
-  ctx.strokeStyle = style.horizonColor;
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = isLightStyle ? "rgba(26, 26, 46, 0.35)" : style.horizonColor;
+  ctx.lineWidth = isLightStyle ? 1.5 : 2;
   ctx.setLineDash([5, 5]);
   ctx.beginPath();
   ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
@@ -579,8 +635,8 @@ export function renderStarMap(
   for (const dir of directions) {
     // Glow
     ctx.save();
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = style.starGlowColor;
+    ctx.globalAlpha = isLightStyle ? 0.2 : 0.3;
+    ctx.fillStyle = isLightStyle ? "rgba(26, 26, 46, 0.5)" : style.starGlowColor;
     ctx.filter = `blur(${dirFontSize * 0.4}px)`;
     ctx.font = `500 ${dirFontSize}px "Helvetica Neue", "Inter", Arial, sans-serif`;
     ctx.fillText(dir.label, dir.x, dir.y);
@@ -596,7 +652,7 @@ export function renderStarMap(
   }
 
   // --- Subtle grain overlay ---
-  drawSubtleGrain(ctx, canvasWidth, canvasHeight, 0.03);
+  drawSubtleGrain(ctx, canvasWidth, canvasHeight, isLightStyle ? 0.015 : 0.03);
 }
 
 // ---------- Sky Description ----------
