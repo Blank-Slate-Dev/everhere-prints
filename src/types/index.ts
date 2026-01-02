@@ -95,6 +95,7 @@ export interface StarMapCustomization {
   showConstellationNames: boolean;
   showGrid: boolean;
   showMilkyWay: boolean;
+  showCardinals: boolean;
 }
 
 export interface StarMapProductSelection {

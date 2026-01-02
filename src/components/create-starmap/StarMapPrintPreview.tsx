@@ -109,6 +109,7 @@ export default function StarMapPrintPreview({
         showConstellationNames: customization.showConstellationNames,
         showGrid: customization.showGrid,
         showMilkyWay: customization.showMilkyWay,
+        showCardinals: customization.showCardinals,
         canvasWidth: containerWidth,
         canvasHeight: containerHeight,
         stars,

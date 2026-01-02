@@ -8,10 +8,12 @@ interface StarMapDisplayOptionsProps {
   showConstellationNames: boolean;
   showGrid: boolean;
   showMilkyWay: boolean;
+  showCardinals: boolean;
   onToggleConstellations: (value: boolean) => void;
   onToggleConstellationNames: (value: boolean) => void;
   onToggleGrid: (value: boolean) => void;
   onToggleMilkyWay: (value: boolean) => void;
+  onToggleCardinals: (value: boolean) => void;
 }
 
 interface ToggleOption {
@@ -27,10 +29,12 @@ export default function StarMapDisplayOptions({
   showConstellationNames,
   showGrid,
   showMilkyWay,
+  showCardinals,
   onToggleConstellations,
   onToggleConstellationNames,
   onToggleGrid,
   onToggleMilkyWay,
+  onToggleCardinals,
 }: StarMapDisplayOptionsProps) {
   const options: ToggleOption[] = [
     {
@@ -60,6 +64,13 @@ export default function StarMapDisplayOptions({
       description: "Subtle galaxy band",
       checked: showMilkyWay,
       onChange: onToggleMilkyWay,
+    },
+    {
+      id: "cardinals",
+      label: "Cardinal Directions",
+      description: "Show N, E, S, W markers",
+      checked: showCardinals,
+      onChange: onToggleCardinals,
     },
   ];
 

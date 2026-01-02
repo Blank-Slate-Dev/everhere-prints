@@ -35,6 +35,7 @@ export default function CreateStarMapPage() {
     showConstellationNames: false,
     showGrid: false,
     showMilkyWay: true,
+    showCardinals: true,
   });
 
   // Product selection state
@@ -140,6 +141,10 @@ export default function CreateStarMapPage() {
 
   const handleToggleMilkyWay = useCallback((value: boolean) => {
     setCustomization((prev) => ({ ...prev, showMilkyWay: value }));
+  }, []);
+
+  const handleToggleCardinals = useCallback((value: boolean) => {
+    setCustomization((prev) => ({ ...prev, showCardinals: value }));
   }, []);
 
   const handleSizeChange = useCallback((size: PrintSize) => {
@@ -277,10 +282,12 @@ export default function CreateStarMapPage() {
                   showConstellationNames={customization.showConstellationNames}
                   showGrid={customization.showGrid}
                   showMilkyWay={customization.showMilkyWay}
+                  showCardinals={customization.showCardinals}
                   onToggleConstellations={handleToggleConstellations}
                   onToggleConstellationNames={handleToggleConstellationNames}
                   onToggleGrid={handleToggleGrid}
                   onToggleMilkyWay={handleToggleMilkyWay}
+                  onToggleCardinals={handleToggleCardinals}
                 />
               </div>
             </div>

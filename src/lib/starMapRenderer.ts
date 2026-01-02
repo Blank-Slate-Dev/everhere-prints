@@ -18,6 +18,7 @@ interface RenderOptions {
   showConstellationNames: boolean;
   showGrid: boolean;
   showMilkyWay: boolean;
+  showCardinals: boolean;
   canvasWidth: number;
   canvasHeight: number;
   stars?: Star[]; // BSC star catalog (loaded externally)
@@ -227,6 +228,7 @@ export function renderStarMap(
     showConstellationNames,
     showGrid,
     showMilkyWay,
+    showCardinals,
     canvasWidth,
     canvasHeight,
     stars = [],
@@ -363,26 +365,40 @@ export function renderStarMap(
   // --- Grid ---
   if (showGrid) {
     ctx.save();
+    
+    // Clip to main circle so grid doesn't overflow
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius - 1, 0, Math.PI * 2);
+    ctx.clip();
+    
     ctx.strokeStyle = style.gridColor;
     ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.38;
+    ctx.globalAlpha = 0.45;
 
-    // Concentric circles (altitude lines)
-    for (let alt = 15; alt <= 75; alt += 15) {
-      const gridRadius = radius * (1 - alt / 90);
+    // Pole position at bottom of circle
+    const poleX = centerX;
+    const poleY = centerY + radius * 0.85;
+    
+    // Draw latitude lines (full circles emanating from pole)
+    for (let i = 1; i <= 12; i++) {
+      // Use power spacing so circles bunch toward pole
+      const t = i / 12;
+      const arcRadius = radius * 2.2 * Math.pow(t, 1.3);
+      
       ctx.beginPath();
-      ctx.arc(centerX, centerY, gridRadius, 0, Math.PI * 2);
+      ctx.arc(poleX, poleY, arcRadius, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    // Radial lines (azimuth lines)
-    for (let az = 0; az < 360; az += 30) {
-      const angle = ((az - 180) * Math.PI) / 180;
+    // Draw longitude lines (radiate from pole in all directions)
+    for (let lon = 0; lon < 360; lon += 15) {
+      const angle = (lon * Math.PI) / 180;
+      
       ctx.beginPath();
-      ctx.moveTo(centerX, centerY);
+      ctx.moveTo(poleX, poleY);
       ctx.lineTo(
-        centerX + radius * Math.sin(angle),
-        centerY - radius * Math.cos(angle)
+        poleX + Math.cos(angle) * radius * 2.5,
+        poleY + Math.sin(angle) * radius * 2.5
       );
       ctx.stroke();
     }
@@ -530,7 +546,7 @@ export function renderStarMap(
 
   // --- Draw constellation names ---
   if (showConstellationNames) {
-    const fontSize = Math.max(7, canvasWidth / 75);
+    const fontSize = Math.max(7, canvasWidth / 70);
     const letterSpacing = fontSize * 0.15;
 
     for (const constellation of constellations) {
@@ -620,35 +636,37 @@ export function renderStarMap(
   ctx.restore(); // End circular clip
 
   // --- Cardinal directions ---
-  const dirFontSize = Math.max(11, canvasWidth / 40);
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
+  if (showCardinals) {
+    const dirFontSize = Math.max(11, canvasWidth / 40);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
 
-  const dirOffset = radius + dirFontSize * 1.5;
-  const directions = [
-    { label: "N", x: centerX, y: centerY - dirOffset },
-    { label: "S", x: centerX, y: centerY + dirOffset },
-    { label: "E", x: centerX - dirOffset, y: centerY },
-    { label: "W", x: centerX + dirOffset, y: centerY },
-  ];
+    const dirOffset = radius + dirFontSize * 1.5;
+    const directions = [
+      { label: "N", x: centerX, y: centerY - dirOffset },
+      { label: "S", x: centerX, y: centerY + dirOffset },
+      { label: "E", x: centerX - dirOffset, y: centerY },
+      { label: "W", x: centerX + dirOffset, y: centerY },
+    ];
 
-  for (const dir of directions) {
-    // Glow
-    ctx.save();
-    ctx.globalAlpha = isLightStyle ? 0.2 : 0.3;
-    ctx.fillStyle = isLightStyle ? "rgba(26, 26, 46, 0.5)" : style.starGlowColor;
-    ctx.filter = `blur(${dirFontSize * 0.4}px)`;
-    ctx.font = `500 ${dirFontSize}px "Helvetica Neue", "Inter", Arial, sans-serif`;
-    ctx.fillText(dir.label, dir.x, dir.y);
-    ctx.restore();
+    for (const dir of directions) {
+      // Glow
+      ctx.save();
+      ctx.globalAlpha = isLightStyle ? 0.2 : 0.3;
+      ctx.fillStyle = isLightStyle ? "rgba(26, 26, 46, 0.5)" : style.starGlowColor;
+      ctx.filter = `blur(${dirFontSize * 0.4}px)`;
+      ctx.font = `500 ${dirFontSize}px "Helvetica Neue", "Inter", Arial, sans-serif`;
+      ctx.fillText(dir.label, dir.x, dir.y);
+      ctx.restore();
 
-    // Main
-    ctx.save();
-    ctx.globalAlpha = 0.9;
-    ctx.fillStyle = style.textColor;
-    ctx.font = `500 ${dirFontSize}px "Helvetica Neue", "Inter", Arial, sans-serif`;
-    ctx.fillText(dir.label, dir.x, dir.y);
-    ctx.restore();
+      // Main
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = style.textColor;
+      ctx.font = `500 ${dirFontSize}px "Helvetica Neue", "Inter", Arial, sans-serif`;
+      ctx.fillText(dir.label, dir.x, dir.y);
+      ctx.restore();
+    }
   }
 
   // --- Subtle grain overlay ---
