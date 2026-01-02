@@ -1,12 +1,13 @@
 // src/lib/starMapRenderer.ts
+// Star map renderer using BSC5 catalog (~9000 real stars)
 
 import * as Astronomy from "astronomy-engine";
 import {
   StarMapStyle,
-  brightStars,
   constellations,
   getStarMapStyle,
 } from "./starMapConfig";
+import { Star, getStarColorFromTemp } from "./bscStars";
 
 interface RenderOptions {
   date: Date;
@@ -19,6 +20,7 @@ interface RenderOptions {
   showMilkyWay: boolean;
   canvasWidth: number;
   canvasHeight: number;
+  stars?: Star[]; // BSC star catalog (loaded externally)
 }
 
 interface StarPosition {
@@ -26,7 +28,8 @@ interface StarPosition {
   y: number;
   magnitude: number;
   name?: string;
-  altitude: number; // Above horizon
+  altitude: number;
+  tempK?: number;
 }
 
 // ---------- helpers ----------
@@ -43,14 +46,13 @@ function lerp(a: number, b: number, t: number): number {
 
 // Simple deterministic pseudo-random based on numbers (no state)
 function hash2(a: number, b: number): number {
-  // returns [0..1)
   const s = Math.sin(a * 127.1 + b * 311.7) * 43758.5453123;
   return s - Math.floor(s);
 }
 
 // Convert Right Ascension and Declination to Altitude/Azimuth for a given time and location
 function raDecToAltAz(
-  ra: number, // hours
+  ra: number, // hours (0-24)
   dec: number, // degrees
   date: Date,
   latitude: number,
@@ -89,12 +91,10 @@ function raDecToAltAz(
   return { altitude, azimuth };
 }
 
-// Project altitude/azimuth to x/y on canvas (your existing stereographic-ish approach)
+// Project altitude/azimuth to x/y on canvas (stereographic projection)
 function projectToCanvas(
   altitude: number,
   azimuth: number,
-  canvasWidth: number,
-  canvasHeight: number,
   centerX: number,
   centerY: number,
   radius: number
@@ -111,31 +111,45 @@ function projectToCanvas(
   return { x, y };
 }
 
-// Improved magnitude → radius (more “print” looking)
-function getMagnitudeRadius(magnitude: number): number {
-  // Brighter stars pop more, dim stars remain visible.
-  const t = clamp((6 - magnitude) / 6, 0, 1); // mag ~0..6 mapped
-  const base = lerp(0.55, 3.9, Math.pow(t, 1.65));
-  return clamp(base, 0.5, 5);
+// Magnitude to visual radius (print-quality scaling)
+function getMagnitudeRadius(magnitude: number, canvasWidth: number): number {
+  // Scale factor based on canvas size (preview vs print)
+  const scaleFactor = canvasWidth < 900 ? 1.0 : 1.3;
+  
+  // Brighter stars (lower magnitude) get larger radius
+  // Mag range: roughly -1.5 (Sirius) to 6.5 (naked eye limit)
+  const t = clamp((6.5 - magnitude) / 8, 0, 1);
+  const base = lerp(0.3, 4.5, Math.pow(t, 1.5));
+  
+  return clamp(base * scaleFactor, 0.25, 6);
 }
 
-// Slight star color variation (subtle, print friendly)
-function getStarTint(
+// Get star color based on temperature and style
+function getStarColor(
   style: StarMapStyle,
-  magnitude: number,
-  seed: number
+  tempK: number | undefined,
+  magnitude: number
 ): string {
-  const warm = "rgba(255, 244, 220, 1)";
-  const cool = "rgba(215, 231, 255, 1)";
-  const pick = seed < 0.5 ? warm : cool;
+  // For light backgrounds, use dark star color
+  if (style.id === "celestial") {
+    return style.starColor;
+  }
 
-  // Dim stars: closer to base starColor
-  // Bright stars: allow tiny tint variation
-  const strength = clamp((2.2 - magnitude) / 2.2, 0, 1) * 0.35;
+  // No temperature data - use style's default star color
+  if (!tempK) {
+    return style.starColor;
+  }
 
-  // We can't easily blend hex strings safely without parsing,
-  // so we just return base starColor for most, and tint for the brightest.
-  return strength > 0.18 ? pick : style.starColor;
+  // Get RGB from temperature
+  const rgb = getStarColorFromTemp(tempK);
+  
+  // Blend toward white for dimmer stars (less saturated)
+  const dimFactor = clamp((magnitude - 2) / 4, 0, 0.7);
+  const r = Math.round(lerp(rgb.r, 255, dimFactor));
+  const g = Math.round(lerp(rgb.g, 255, dimFactor));
+  const b = Math.round(lerp(rgb.b, 255, dimFactor));
+
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 // Helper function to draw text with letter spacing
@@ -153,7 +167,7 @@ function drawSpacedText(
   }
 }
 
-// Subtle paper grain overlay (SAFE + LIGHT)
+// Subtle paper grain overlay
 function drawSubtleGrain(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -180,54 +194,7 @@ function drawSubtleGrain(
   ctx.restore();
 }
 
-// Faint background star field (dense but print-friendly, deterministic)
-function drawFaintStarField(
-  ctx: CanvasRenderingContext2D,
-  canvasWidth: number,
-  canvasHeight: number,
-  centerX: number,
-  centerY: number,
-  radius: number
-): void {
-  // Density scales with resolution (preview vs print)
-  const densityDivisor = canvasWidth < 900 ? 90 : 160;
-  const faintCount = Math.round((canvasWidth * canvasHeight) / densityDivisor);
-
-  ctx.save();
-
-  for (let i = 0; i < faintCount; i++) {
-    // Deterministic randomness
-    const u = hash2(i, radius);
-    const v = hash2(i + 17.7, radius + 9.1);
-
-    // Uniform distribution in circle
-    const r = Math.sqrt(u) * radius;
-    const theta = v * Math.PI * 2;
-
-    const x = centerX + r * Math.cos(theta);
-    const y = centerY + r * Math.sin(theta);
-
-    // Distance-based fade (toward horizon/edge)
-    const distNorm = r / radius;
-    const fade = clamp(1 - Math.pow(distNorm, 1.8), 0.15, 1);
-
-    const size = lerp(0.35, 0.9, hash2(i, i * 3.1));
-    const alpha =
-      fade *
-      (canvasWidth < 900 ? 0.55 : 0.4) *
-      lerp(0.6, 1, hash2(i, i + 99));
-
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = "rgba(255,255,255,1)";
-    ctx.beginPath();
-    ctx.arc(x, y, size, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  ctx.restore();
-}
-
-// ---------- Render ----------
+// ---------- Main Render Function ----------
 
 export function renderStarMap(
   ctx: CanvasRenderingContext2D,
@@ -244,6 +211,7 @@ export function renderStarMap(
     showMilkyWay,
     canvasWidth,
     canvasHeight,
+    stars = [],
   } = options;
 
   const style = getStarMapStyle(styleId);
@@ -299,7 +267,7 @@ export function renderStarMap(
     ctx.restore();
   }
 
-  // --- Milky Way (layered, more organic) ---
+  // --- Milky Way (layered, organic feel) ---
   if (showMilkyWay) {
     ctx.save();
 
@@ -354,7 +322,7 @@ export function renderStarMap(
     ctx.restore();
   }
 
-  // --- Grid (cleaner / lighter) ---
+  // --- Grid ---
   if (showGrid) {
     ctx.save();
     ctx.strokeStyle = style.gridColor;
@@ -384,38 +352,39 @@ export function renderStarMap(
     ctx.restore();
   }
 
-  // Calculate star positions
+  // --- Calculate star positions ---
   const starPositions: StarPosition[] = [];
 
-  for (const star of brightStars) {
-    const [ra, dec, mag, name] = star;
-    const { altitude, azimuth } = raDecToAltAz(ra, dec, date, latitude, longitude);
+  // Determine magnitude limit based on canvas size (more stars for print)
+  const magLimit = canvasWidth < 900 ? 5.5 : 6.5;
 
-    const pos = projectToCanvas(
-      altitude,
-      azimuth,
-      canvasWidth,
-      canvasHeight,
-      centerX,
-      centerY,
-      radius
+  for (const star of stars) {
+    // Skip stars dimmer than our limit
+    if (star.mag > magLimit) continue;
+
+    const { altitude, azimuth } = raDecToAltAz(
+      star.ra,
+      star.dec,
+      date,
+      latitude,
+      longitude
     );
+
+    const pos = projectToCanvas(altitude, azimuth, centerX, centerY, radius);
 
     if (pos) {
       starPositions.push({
         x: pos.x,
         y: pos.y,
-        magnitude: mag,
-        name,
+        magnitude: star.mag,
+        name: star.name,
         altitude,
+        tempK: star.tempK,
       });
     }
   }
 
-  // --- Faint background star field (print-grade density) ---
-  drawFaintStarField(ctx, canvasWidth, canvasHeight, centerX, centerY, radius);
-
-  // Draw constellation lines (slightly softer)
+  // --- Draw constellation lines ---
   if (showConstellations) {
     ctx.save();
     ctx.strokeStyle = style.constellationLineColor;
@@ -432,8 +401,6 @@ export function renderStarMap(
         const pos1 = projectToCanvas(
           pos1AltAz.altitude,
           pos1AltAz.azimuth,
-          canvasWidth,
-          canvasHeight,
           centerX,
           centerY,
           radius
@@ -442,15 +409,13 @@ export function renderStarMap(
         const pos2 = projectToCanvas(
           pos2AltAz.altitude,
           pos2AltAz.azimuth,
-          canvasWidth,
-          canvasHeight,
           centerX,
           centerY,
           radius
         );
 
         if (pos1 && pos2) {
-          // fade lines near horizon for cleanliness
+          // Fade lines near horizon
           const fade = clamp(
             (Math.min(pos1AltAz.altitude, pos2AltAz.altitude) + 8) / 30,
             0.25,
@@ -469,29 +434,38 @@ export function renderStarMap(
     ctx.restore();
   }
 
-  // Draw stars (better glow + horizon fade)
-  for (const star of starPositions) {
-    const starRadius = getMagnitudeRadius(star.magnitude);
+  // --- Draw stars (dimmest first, then bright on top) ---
+  // Stars are already sorted brightest-first, so reverse for proper layering
+  const sortedStars = [...starPositions].sort((a, b) => b.magnitude - a.magnitude);
 
-    // Fade stars near the horizon so the edge stays clean
+  for (const star of sortedStars) {
+    const starRadius = getMagnitudeRadius(star.magnitude, canvasWidth);
+
+    // Fade stars near the horizon (atmospheric extinction)
     const horizonFade = clamp((star.altitude + 10) / 35, 0.15, 1);
 
-    // Small static “twinkle variance” so it feels organic (not uniform)
+    // Subtle twinkle variance for organic feel
     const tw = lerp(0.85, 1.08, hash2(star.x, star.y));
     const finalR = starRadius * tw;
 
-    const tint = getStarTint(style, star.magnitude, hash2(star.magnitude, star.x + star.y));
+    const starColor = getStarColor(style, star.tempK, star.magnitude);
 
-    // Star glow for bright stars
+    // Star glow for bright stars (mag < 2.2)
     if (star.magnitude < 2.2) {
-      const glowRadius = finalR * lerp(3.0, 4.6, clamp((2.2 - star.magnitude) / 2.2, 0, 1));
-      const gradient = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, glowRadius);
+      const glowIntensity = clamp((2.2 - star.magnitude) / 3.7, 0, 1);
+      const glowRadius = finalR * lerp(3.0, 5.5, glowIntensity);
+      
+      const gradient = ctx.createRadialGradient(
+        star.x, star.y, 0,
+        star.x, star.y, glowRadius
+      );
 
+      // Use star's actual color for glow
       gradient.addColorStop(0, style.starGlowColor);
       gradient.addColorStop(1, "transparent");
 
       ctx.save();
-      ctx.globalAlpha = horizonFade * lerp(0.18, 0.75, clamp((2.2 - star.magnitude) / 2.2, 0, 1));
+      ctx.globalAlpha = horizonFade * lerp(0.15, 0.65, glowIntensity);
       ctx.fillStyle = gradient;
       ctx.beginPath();
       ctx.arc(star.x, star.y, glowRadius, 0, Math.PI * 2);
@@ -502,14 +476,14 @@ export function renderStarMap(
     // Star dot
     ctx.save();
     ctx.globalAlpha = horizonFade;
-    ctx.fillStyle = tint;
+    ctx.fillStyle = starColor;
     ctx.beginPath();
     ctx.arc(star.x, star.y, finalR, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
 
-  // Draw constellation names with elegant celestial styling (your original logic kept)
+  // --- Draw constellation names ---
   if (showConstellationNames) {
     const fontSize = Math.max(9, canvasWidth / 55);
     const letterSpacing = fontSize * 0.15;
@@ -526,8 +500,6 @@ export function renderStarMap(
         const pos = projectToCanvas(
           altAz.altitude,
           altAz.azimuth,
-          canvasWidth,
-          canvasHeight,
           centerX,
           centerY,
           radius
@@ -580,7 +552,7 @@ export function renderStarMap(
     }
   }
 
-  // Draw horizon circle (kept)
+  // --- Draw horizon circle ---
   ctx.strokeStyle = style.horizonColor;
   ctx.lineWidth = 2;
   ctx.setLineDash([5, 5]);
@@ -589,9 +561,9 @@ export function renderStarMap(
   ctx.stroke();
   ctx.setLineDash([]);
 
-  ctx.restore(); // end circular clip
+  ctx.restore(); // End circular clip
 
-  // Cardinal directions (kept)
+  // --- Cardinal directions ---
   const dirFontSize = Math.max(11, canvasWidth / 40);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -600,12 +572,12 @@ export function renderStarMap(
   const directions = [
     { label: "N", x: centerX, y: centerY - dirOffset },
     { label: "S", x: centerX, y: centerY + dirOffset },
-    { label: "E", x: centerX - dirOffset, y: centerY }, // kept as your original orientation
+    { label: "E", x: centerX - dirOffset, y: centerY },
     { label: "W", x: centerX + dirOffset, y: centerY },
   ];
 
   for (const dir of directions) {
-    // glow
+    // Glow
     ctx.save();
     ctx.globalAlpha = 0.3;
     ctx.fillStyle = style.starGlowColor;
@@ -614,7 +586,7 @@ export function renderStarMap(
     ctx.fillText(dir.label, dir.x, dir.y);
     ctx.restore();
 
-    // main
+    // Main
     ctx.save();
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = style.textColor;
@@ -623,11 +595,12 @@ export function renderStarMap(
     ctx.restore();
   }
 
-  // Subtle grain overlay (very light)
+  // --- Subtle grain overlay ---
   drawSubtleGrain(ctx, canvasWidth, canvasHeight, 0.03);
 }
 
-// Get description of the sky for a given date/location
+// ---------- Sky Description ----------
+
 export function getSkyDescription(
   date: Date,
   latitude: number,
