@@ -118,9 +118,32 @@ const products = [
   },
 ];
 
-// Moon phase with two shadows that hand off at full moon
+/*
+ * Moon Phase Animation - Proper astronomical representation
+ * 
+ * The lit portion is constructed from:
+ * 1. A semicircle (right half for waxing, left half for waning)
+ * 2. An ellipse at center that either ADDS to or SUBTRACTS from the lit area
+ * 
+ * WAXING (0% → 50%): Shadow on LEFT, lit on RIGHT
+ * - New Moon: Right semicircle + dark ellipse (rx=45) covering it = nothing lit
+ * - Waxing Crescent: Right semicircle + dark ellipse (rx=30) = thin sliver on right
+ * - First Quarter: Right semicircle + no ellipse (rx=0) = right half lit
+ * - Waxing Gibbous: Right semicircle + LIGHT ellipse (rx=30) = mostly lit
+ * - Full Moon: Right semicircle + light ellipse (rx=45) = all lit
+ * 
+ * WANING (50% → 100%): Shadow on RIGHT, lit on LEFT
+ * - Full Moon: Left semicircle + light ellipse (rx=45) = all lit
+ * - Waning Gibbous: Left semicircle + light ellipse (rx=30) = mostly lit
+ * - Last Quarter: Left semicircle + no ellipse (rx=0) = left half lit
+ * - Waning Crescent: Left semicircle + dark ellipse (rx=30) = thin sliver on left
+ * - New Moon: Left semicircle + dark ellipse (rx=45) = nothing lit
+ */
 function AnimatedMoonPhase() {
   const duration = 8;
+  const R = 45; // Moon radius
+  const litColor = "#F4F6F0";
+  const darkColor = "#0f172a";
   
   return (
     <div className="relative w-full h-full flex items-center justify-center">
@@ -139,108 +162,137 @@ function AnimatedMoonPhase() {
         <div className="relative w-36 h-36">
           <svg viewBox="0 0 100 100" className="w-full h-full">
             <defs>
-              <radialGradient id="moonSurface" cx="35%" cy="35%">
+              <radialGradient id="moonTexture" cx="35%" cy="35%">
                 <stop offset="0%" stopColor="#fffffb" />
                 <stop offset="50%" stopColor="#f5f5ef" />
                 <stop offset="100%" stopColor="#e8e8e0" />
               </radialGradient>
               <clipPath id="moonClip">
-                <circle cx="50" cy="50" r="45" />
+                <circle cx="50" cy="50" r={R} />
               </clipPath>
             </defs>
             
-            {/* Lit moon surface */}
-            <circle cx="50" cy="50" r="45" fill="url(#moonSurface)" />
+            {/* Dark moon base (shadow) */}
+            <circle cx="50" cy="50" r={R} fill={darkColor} />
             
-            {/* Crater details */}
-            <g opacity="0.5">
-              <circle cx="32" cy="35" r="6" fill="rgba(0,0,0,0.06)" />
-              <circle cx="60" cy="55" r="8" fill="rgba(0,0,0,0.05)" />
-              <circle cx="40" cy="70" r="5" fill="rgba(0,0,0,0.04)" />
-              <circle cx="68" cy="32" r="4" fill="rgba(0,0,0,0.05)" />
-              <circle cx="28" cy="58" r="3" fill="rgba(0,0,0,0.04)" />
+            {/* Crater details on dark side */}
+            <g opacity="0.15">
+              <circle cx="32" cy="35" r="6" fill="#ffffff" />
+              <circle cx="60" cy="55" r="8" fill="#ffffff" />
+              <circle cx="40" cy="70" r="5" fill="#ffffff" />
+              <circle cx="68" cy="32" r="4" fill="#ffffff" />
             </g>
             
+            {/* Lit portion - clipped to moon circle */}
             <g clipPath="url(#moonClip)">
-              {/* 
-                Shadow 1: WAXING phase (0% → 50%)
-                Covers LEFT side, shrinks from full to nothing
-                Shadow sweeps from left to right, revealing the moon
-              */}
-              <motion.path
-                fill="#0f172a"
-                animate={{
-                  d: [
-                    // 0% - New Moon: full shadow (covers entire moon)
-                    "M 50 5 A 45 45 0 1 0 50 95 A 45 45 0 0 1 50 5",
-                    // 12.5% - Waxing Crescent: large shadow, terminator curves right
-                    "M 50 5 A 45 45 0 1 0 50 95 A 30 45 0 0 1 50 5",
-                    // 25% - First Quarter: exactly half shadow on left
-                    "M 50 5 A 45 45 0 1 0 50 95 L 50 5",
-                    // 37.5% - Waxing Gibbous: small shadow, terminator curves left
-                    "M 50 5 A 45 45 0 1 0 50 95 A 30 45 0 0 0 50 5",
-                    // 50% - Full Moon: shadow gone
-                    "M 5 50 A 45 45 0 1 0 5 50 A 45 45 0 0 0 5 50",
-                    // Stay invisible for second half
-                    "M 5 50 A 45 45 0 1 0 5 50 A 45 45 0 0 0 5 50",
-                    "M 5 50 A 45 45 0 1 0 5 50 A 45 45 0 0 0 5 50",
-                    "M 5 50 A 45 45 0 1 0 5 50 A 45 45 0 0 0 5 50",
-                    // 100% - Back to new moon
-                    "M 50 5 A 45 45 0 1 0 50 95 A 45 45 0 0 1 50 5",
-                  ],
-                  opacity: [1, 1, 1, 1, 0, 0, 0, 0, 1],
-                }}
-                transition={{
-                  duration: duration,
-                  repeat: Infinity,
-                  ease: "linear",
-                  times: [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1],
-                }}
-              />
               
-              {/* 
-                Shadow 2: WANING phase (50% → 100%)
-                Covers RIGHT side, grows from nothing to full
-                Shadow sweeps from right to left, covering the moon
-              */}
-              <motion.path
-                fill="#0f172a"
+              {/* ========== WAXING PHASE (first half) ========== */}
+              {/* Shadow on LEFT, lit area on RIGHT */}
+              <motion.g
                 animate={{
-                  d: [
-                    // 0% - Hidden at start
-                    "M 95 50 A 45 45 0 1 1 95 50 A 45 45 0 0 1 95 50",
-                    "M 95 50 A 45 45 0 1 1 95 50 A 45 45 0 0 1 95 50",
-                    "M 95 50 A 45 45 0 1 1 95 50 A 45 45 0 0 1 95 50",
-                    "M 95 50 A 45 45 0 1 1 95 50 A 45 45 0 0 1 95 50",
-                    // 50% - Full Moon: shadow starts (nothing visible)
-                    "M 95 50 A 45 45 0 1 1 95 50 A 45 45 0 0 1 95 50",
-                    // 62.5% - Waning Gibbous: small shadow on right, terminator curves right
-                    "M 50 5 A 45 45 0 1 1 50 95 A 30 45 0 0 1 50 5",
-                    // 75% - Last Quarter: exactly half shadow on right
-                    "M 50 5 A 45 45 0 1 1 50 95 L 50 5",
-                    // 87.5% - Waning Crescent: large shadow, terminator curves left
-                    "M 50 5 A 45 45 0 1 1 50 95 A 30 45 0 0 0 50 5",
-                    // 100% - New Moon: full shadow
-                    "M 50 5 A 45 45 0 1 1 50 95 A 45 45 0 0 0 50 5",
-                  ],
-                  opacity: [0, 0, 0, 0, 0, 1, 1, 1, 1],
+                  opacity: [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1],
                 }}
                 transition={{
-                  duration: duration,
+                  duration,
                   repeat: Infinity,
                   ease: "linear",
-                  times: [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1],
+                  times: [0, 0.125, 0.25, 0.375, 0.49, 0.51, 0.625, 0.75, 0.875, 0.99, 1],
                 }}
-              />
+              >
+                {/* Right semicircle - base lit area during waxing */}
+                <path 
+                  d={`M 50 ${50-R} A ${R} ${R} 0 0 1 50 ${50+R} L 50 ${50-R} Z`}
+                  fill="url(#moonTexture)"
+                />
+                
+                {/* Terminator ellipse - modifies the lit area */}
+                {/* fill=dark SUBTRACTS (crescent), fill=light ADDS (gibbous) */}
+                <motion.ellipse
+                  cx="50"
+                  cy="50"
+                  ry={R}
+                  animate={{
+                    rx: [R, R*0.65, 0, R*0.65, R, R, R, R, R, R, R],
+                    fill: [
+                      darkColor,    // 0% New - dark ellipse covers right semicircle
+                      darkColor,    // 12.5% Waxing Crescent - dark ellipse shrinking
+                      darkColor,    // 25% First Quarter - no ellipse (rx=0)
+                      litColor,     // 37.5% Waxing Gibbous - light ellipse extending left
+                      litColor,     // 50% Full - light ellipse covers all
+                      litColor, litColor, litColor, litColor, litColor, darkColor
+                    ],
+                  }}
+                  transition={{
+                    duration,
+                    repeat: Infinity,
+                    ease: "linear",
+                    times: [0, 0.125, 0.25, 0.375, 0.5, 0.51, 0.625, 0.75, 0.875, 0.99, 1],
+                  }}
+                />
+              </motion.g>
+              
+              {/* ========== WANING PHASE (second half) ========== */}
+              {/* Shadow on RIGHT, lit area on LEFT */}
+              <motion.g
+                animate={{
+                  opacity: [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0],
+                }}
+                transition={{
+                  duration,
+                  repeat: Infinity,
+                  ease: "linear",
+                  times: [0, 0.125, 0.25, 0.375, 0.49, 0.51, 0.625, 0.75, 0.875, 0.99, 1],
+                }}
+              >
+                {/* Left semicircle - base lit area during waning */}
+                <path 
+                  d={`M 50 ${50-R} A ${R} ${R} 0 0 0 50 ${50+R} L 50 ${50-R} Z`}
+                  fill="url(#moonTexture)"
+                />
+                
+                {/* Terminator ellipse for waning phases */}
+                <motion.ellipse
+                  cx="50"
+                  cy="50"
+                  ry={R}
+                  animate={{
+                    rx: [R, R, R, R, R, R, R*0.65, 0, R*0.65, R, R],
+                    fill: [
+                      litColor, litColor, litColor, litColor, litColor,
+                      litColor,     // 50% Full - light ellipse covers all
+                      litColor,     // 62.5% Waning Gibbous - light ellipse shrinking
+                      litColor,     // 75% Last Quarter - no ellipse (rx=0)
+                      darkColor,    // 87.5% Waning Crescent - dark ellipse growing
+                      darkColor,    // 100% New - dark ellipse covers left semicircle
+                      litColor
+                    ],
+                  }}
+                  transition={{
+                    duration,
+                    repeat: Infinity,
+                    ease: "linear",
+                    times: [0, 0.125, 0.25, 0.375, 0.49, 0.51, 0.625, 0.75, 0.875, 0.99, 1],
+                  }}
+                />
+              </motion.g>
             </g>
             
-            {/* Subtle edge */}
+            {/* Crater details on lit surface */}
+            <g clipPath="url(#moonClip)" opacity="0.4" style={{ mixBlendMode: "multiply" }}>
+              <circle cx="32" cy="35" r="6" fill="rgba(0,0,0,0.1)" />
+              <circle cx="60" cy="55" r="8" fill="rgba(0,0,0,0.08)" />
+              <circle cx="40" cy="70" r="5" fill="rgba(0,0,0,0.06)" />
+              <circle cx="68" cy="32" r="4" fill="rgba(0,0,0,0.08)" />
+              <circle cx="28" cy="58" r="3" fill="rgba(0,0,0,0.06)" />
+            </g>
+            
+            {/* Subtle edge highlight */}
             <circle 
               cx="50" 
               cy="50" 
-              r="45" 
+              r={R} 
               fill="none" 
-              stroke="rgba(255,255,255,0.1)" 
+              stroke="rgba(255,255,255,0.12)" 
               strokeWidth="1"
             />
           </svg>
