@@ -80,7 +80,7 @@ export interface NewZealandOrderData {
   totalPrice: number;
 }
 
-export type ProductType = "map" | "australia" | "newzealand" | "starmap" | "moonphase";
+export type ProductType = "map" | "australia" | "newzealand" | "starmap" | "moonphase" | "soundwave";
 
 // Star Map Print Types
 export interface StarMapCustomization {
@@ -128,5 +128,52 @@ export interface MoonPhaseProductSelection {
 export interface MoonPhaseOrderData {
   customization: MoonPhaseCustomization;
   product: MoonPhaseProductSelection;
+  totalPrice: number;
+}
+
+// Sound Wave Print Types
+export interface SoundWaveCustomization {
+  title: string;
+  subtitle: string;
+  dateText: string;
+  styleId: string;
+  waveformData: number[]; // Full song waveform (normalized 0-1)
+  audioDuration: number; // Duration in seconds
+  audioFileName: string;
+  // Song metadata (from music search)
+  songData: SongMetadata | null;
+  // Display toggles
+  showAlbumArt: boolean;
+  showArtistName: boolean;
+  showAlbumName: boolean;
+  showDuration: boolean;
+  showLyrics: boolean;
+  // Playhead position (0-1) - determines which section of waveform to show and which lyrics
+  waveformPosition: number;
+  // Lyrics
+  fullLyrics: string | null;
+  selectedLyrics: string[]; // Array of selected lyric lines (up to 4)
+}
+
+export interface SongMetadata {
+  trackId: string;
+  songName: string;
+  artistName: string;
+  albumName: string;
+  albumArtUrl: string | null;
+  durationMs: number;
+  trackUrl: string;
+  previewUrl: string | null;
+  geniusId?: number; // For fetching lyrics
+}
+
+export interface SoundWaveProductSelection {
+  size: PrintSize;
+  frame: FrameOption;
+}
+
+export interface SoundWaveOrderData {
+  customization: SoundWaveCustomization;
+  product: SoundWaveProductSelection;
   totalPrice: number;
 }
