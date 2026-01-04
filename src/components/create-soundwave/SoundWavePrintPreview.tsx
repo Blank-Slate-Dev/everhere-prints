@@ -80,11 +80,11 @@ export default function SoundWavePrintPreview({
     return resampled;
   }, [hasAudio, waveformData]);
 
-  // Generate smooth waveform path for SVG
+  // Generate smooth waveform path for SVG - using larger viewBox height to prevent clipping
   const waveformPath = useMemo(() => {
     const data = displayWaveform;
     const width = 400;
-    const height = 100;
+    const height = 120; // Increased from 100 for more headroom
     const centerY = height / 2;
     
     if (data.length === 0) return "";
@@ -94,7 +94,7 @@ export default function SoundWavePrintPreview({
     
     for (let i = 0; i < data.length; i++) {
       const x = (i / (data.length - 1)) * width;
-      const amplitude = data[i] * (height * 0.45);
+      const amplitude = data[i] * (height * 0.38); // Reduced to prevent clipping
       
       points.push(`${i === 0 ? "M" : "L"} ${x.toFixed(2)} ${(centerY - amplitude).toFixed(2)}`);
       bottomPoints.unshift(`L ${x.toFixed(2)} ${(centerY + amplitude).toFixed(2)}`);
@@ -141,7 +141,7 @@ export default function SoundWavePrintPreview({
       transition={{ duration: 0.5 }}
       className="relative"
     >
-      <div className="relative mx-auto max-w-md">
+      <div className="relative mx-auto max-w-lg">
         {/* Drop shadow */}
         <div
           className="absolute inset-0 rounded-sm"
@@ -209,8 +209,8 @@ export default function SoundWavePrintPreview({
                   </div>
 
                   {/* Waveform */}
-                  <div className="flex-shrink-0 flex items-center justify-center" style={{ height: hasLyrics ? "12%" : "16%" }}>
-                    <svg viewBox="0 0 400 100" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+                  <div className="flex-shrink-0 flex items-center justify-center overflow-visible" style={{ height: hasLyrics ? "18%" : "22%" }}>
+                    <svg viewBox="0 0 400 120" className="w-full h-full" preserveAspectRatio="xMidYMid meet" style={{ overflow: "visible" }}>
                       {style.waveGradient && (
                         <defs>
                           <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -226,15 +226,25 @@ export default function SoundWavePrintPreview({
                         <>
                           <line
                             x1={playheadX}
-                            y1={5}
+                            y1={10}
                             x2={playheadX}
-                            y2={95}
+                            y2={110}
                             stroke={style.accentColor}
                             strokeWidth={2}
                             opacity={0.8}
                           />
-                          <circle cx={playheadX} cy={5} r={4} fill={style.accentColor} />
-                          <circle cx={playheadX} cy={95} r={4} fill={style.accentColor} />
+                          <circle
+                            cx={playheadX}
+                            cy={10}
+                            r={4}
+                            fill={style.accentColor}
+                          />
+                          <circle
+                            cx={playheadX}
+                            cy={110}
+                            r={4}
+                            fill={style.accentColor}
+                          />
                         </>
                       )}
                     </svg>
@@ -314,8 +324,8 @@ export default function SoundWavePrintPreview({
                   </div>
 
                   {/* Large Waveform */}
-                  <div className="flex-grow flex items-center justify-center" style={{ maxHeight: hasLyrics ? "35%" : "45%" }}>
-                    <svg viewBox="0 0 400 100" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+                  <div className="flex-grow flex items-center justify-center overflow-visible" style={{ minHeight: "25%", maxHeight: hasLyrics ? "45%" : "55%" }}>
+                    <svg viewBox="0 0 400 120" className="w-full h-full" preserveAspectRatio="xMidYMid meet" style={{ overflow: "visible" }}>
                       {style.waveGradient && (
                         <defs>
                           <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
@@ -331,15 +341,25 @@ export default function SoundWavePrintPreview({
                         <>
                           <line
                             x1={playheadX}
-                            y1={5}
+                            y1={10}
                             x2={playheadX}
-                            y2={95}
+                            y2={110}
                             stroke={style.accentColor}
                             strokeWidth={2}
                             opacity={0.8}
                           />
-                          <circle cx={playheadX} cy={5} r={4} fill={style.accentColor} />
-                          <circle cx={playheadX} cy={95} r={4} fill={style.accentColor} />
+                          <circle
+                            cx={playheadX}
+                            cy={10}
+                            r={4}
+                            fill={style.accentColor}
+                          />
+                          <circle
+                            cx={playheadX}
+                            cy={110}
+                            r={4}
+                            fill={style.accentColor}
+                          />
                         </>
                       )}
                     </svg>

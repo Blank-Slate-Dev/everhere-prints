@@ -175,12 +175,12 @@ export default function SoundWaveLyricsPosition({
 
         <div
           ref={containerRef}
-          className="relative h-24 bg-brand-50 rounded-xl overflow-hidden cursor-pointer select-none"
+          className="relative h-28 bg-brand-50 rounded-xl cursor-pointer select-none"
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
         >
           {/* Full Waveform */}
-          <div className="absolute inset-0 flex items-center px-2">
+          <div className="absolute inset-0 flex items-center px-3 py-2">
             {waveformData.map((amplitude, index) => {
               const barPosition = index / waveformData.length;
               const isBeforePlayhead = barPosition <= position;
@@ -190,7 +190,7 @@ export default function SoundWaveLyricsPosition({
                   key={index}
                   className="flex-1 mx-[0.5px] rounded-full transition-colors duration-150"
                   style={{
-                    height: `${Math.max(4, amplitude * 100)}%`,
+                    height: `${Math.max(4, amplitude * 80)}%`,
                     backgroundColor: isBeforePlayhead ? style.waveColor : "#d1d5db",
                     opacity: isBeforePlayhead ? 0.9 : 0.5,
                   }}

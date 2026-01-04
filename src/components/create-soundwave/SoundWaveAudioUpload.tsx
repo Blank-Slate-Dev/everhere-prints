@@ -194,13 +194,13 @@ export default function SoundWaveAudioUpload({
             </div>
 
             {/* Waveform preview */}
-            <div className="h-12 flex items-center gap-[2px] bg-green-100 rounded-lg p-2">
+            <div className="h-14 flex items-center gap-[2px] bg-green-100 rounded-lg px-2 py-3">
               {waveformData.filter((_, i) => i % 2 === 0).map((amplitude, index) => (
                 <div
                   key={index}
                   className="flex-1 bg-green-500 rounded-full"
                   style={{
-                    height: `${Math.max(10, amplitude * 100)}%`,
+                    height: `${Math.max(10, amplitude * 80)}%`,
                     opacity: 0.6 + amplitude * 0.4,
                   }}
                 />
