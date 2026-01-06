@@ -1,17 +1,25 @@
 // src/lib/blog/types.ts
 
+export type BlogCategory =
+  | 'gift-guides'
+  | 'how-to'
+  | 'inspiration'
+  | 'behind-the-scenes';
+
+export interface BlogAuthor {
+  name: string;
+  avatar?: string;
+  bio?: string;
+}
+
 export interface BlogPost {
   slug: string;
   title: string;
   description: string;
   content: string;
   publishedAt: string;
-  updatedAt: string;
-  author: {
-    name: string;
-    avatar?: string;
-    bio?: string;
-  };
+  updatedAt?: string;
+  author: BlogAuthor;
   image: string;
   imageAlt: string;
   category: BlogCategory;
@@ -20,24 +28,16 @@ export interface BlogPost {
   featured?: boolean;
 }
 
-export type BlogCategory =
-  | 'gift-guides'
-  | 'how-to'
-  | 'inspiration'
-  | 'behind-the-scenes';
-
 export const CATEGORY_LABELS: Record<BlogCategory, string> = {
-  'gift-ideas': 'Gift Ideas',
-  'product-guides': 'Product Guides',
-  occasions: 'Occasions',
+  'gift-guides': 'Gift Guides',
   'how-to': 'How To',
-  inspiration: 'Inspiration',
+  'inspiration': 'Inspiration',
+  'behind-the-scenes': 'Behind the Scenes',
 };
 
 export const CATEGORY_DESCRIPTIONS: Record<BlogCategory, string> = {
-  'gift-ideas': 'Discover unique personalised gift ideas for every occasion',
-  'product-guides': 'Learn about our products and how to create the perfect print',
-  occasions: 'Celebrate special moments with meaningful gifts',
-  'how-to': 'Step-by-step guides for creating personalised prints',
-  inspiration: 'Stories and ideas to inspire your perfect gift',
+  'gift-guides': 'Find the perfect personalised gift for any occasion',
+  'how-to': 'Tips and tutorials for creating beautiful prints',
+  'inspiration': 'Ideas and stories to inspire your next gift',
+  'behind-the-scenes': 'A look at how we create your prints',
 };

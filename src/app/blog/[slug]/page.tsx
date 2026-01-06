@@ -14,6 +14,7 @@ import {
   getPostBySlug,
   getRelatedPosts,
   formatDate,
+  getCategoryLabel,
 } from '@/lib/blog/posts';
 
 // Generate static paths for all blog posts
@@ -49,7 +50,7 @@ export async function generateMetadata({
     modifiedTime: post.updatedAt,
     author: post.author.name,
     tags: post.tags,
-    section: post.category,
+    section: getCategoryLabel(post.category),
   });
 }
 
@@ -84,7 +85,7 @@ export default async function BlogPostPage({
         description={post.description}
         image={post.image}
         publishedAt={post.publishedAt}
-        updatedAt={post.updatedAt}
+        updatedAt={post.updatedAt || post.publishedAt}
         author={post.author.name}
       />
       <JsonLd data={breadcrumbSchema} />
@@ -107,7 +108,7 @@ export default async function BlogPostPage({
             </Link>
 
             <span className="inline-block px-3 py-1 text-xs font-medium text-stone-600 bg-stone-100 rounded-full mb-4">
-              {post.category}
+              {getCategoryLabel(post.category)}
             </span>
 
             <h1 className="font-serif text-3xl md:text-4xl lg:text-5xl text-stone-900 mb-6 text-balance">

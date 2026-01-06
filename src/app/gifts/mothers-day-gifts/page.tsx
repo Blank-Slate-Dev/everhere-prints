@@ -13,7 +13,7 @@ import type { FAQItem } from '@/types/seo';
 export const metadata: Metadata = genMeta({
   title: PAGE_META.mothersDayGifts.title,
   description: PAGE_META.mothersDayGifts.description,
-  keywords: PAGE_META.X.keywords,
+  keywords: PAGE_META.mothersDayGifts.keywords,
   path: '/gifts/mothers-day-gifts',
   image: '/images/og/mothers-day-gifts.jpg',
 });

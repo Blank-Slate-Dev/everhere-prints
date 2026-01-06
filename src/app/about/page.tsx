@@ -12,7 +12,7 @@ import type { FAQItem } from '@/types/seo';
 export const metadata: Metadata = genMeta({
   title: PAGE_META.about.title,
   description: PAGE_META.about.description,
-  keywords: PAGE_META.X.keywords,
+  keywords: PAGE_META.about.keywords,
   path: '/about',
   image: '/images/og/about.jpg',
 });

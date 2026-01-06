@@ -8,12 +8,13 @@ import { generateMetadata as genMeta } from '@/lib/seo/metadata';
 import { Breadcrumbs, JsonLd } from '@/components/seo';
 import { generateCollectionPageSchema } from '@/lib/seo/schemas';
 import { SITE_CONFIG, PAGE_META } from '@/lib/seo/constants';
-import { getAllPosts, getAllCategories, formatDate, getFeaturedPosts } from '@/lib/blog/posts';
+import { getAllPosts, getAllCategories, formatDate, getFeaturedPosts, getCategoryLabel } from '@/lib/blog/posts';
+import type { BlogCategory } from '@/lib/blog/types';
 
 export const metadata: Metadata = genMeta({
   title: PAGE_META.blog.title,
   description: PAGE_META.blog.description,
-  keywords: PAGE_META.X.keywords,
+  keywords: PAGE_META.blog.keywords,
   path: '/blog',
   image: '/images/og/blog.jpg',
 });
@@ -63,13 +64,13 @@ export default function BlogPage() {
               >
                 All Posts
               </Link>
-              {categories.map((category) => (
+              {categories.map((category: BlogCategory) => (
                 <Link
                   key={category}
-                  href={`/blog/category/${category.toLowerCase().replace(/\s+/g, '-')}`}
+                  href={`/blog/category/${category}`}
                   className="text-sm text-stone-500 hover:text-stone-900 whitespace-nowrap transition-colors"
                 >
-                  {category}
+                  {getCategoryLabel(category)}
                 </Link>
               ))}
             </nav>
@@ -94,7 +95,7 @@ export default function BlogPage() {
               </Link>
               <div>
                 <span className="inline-block px-3 py-1 text-xs font-medium text-stone-600 bg-stone-100 rounded-full mb-4">
-                  {featuredPosts[0].category}
+                  {getCategoryLabel(featuredPosts[0].category)}
                 </span>
                 <h2 className="font-serif text-2xl md:text-3xl text-stone-900 mb-4">
                   <Link
@@ -146,7 +147,7 @@ export default function BlogPage() {
                   />
                 </Link>
                 <span className="inline-block px-2 py-0.5 text-xs text-stone-500 bg-stone-100 rounded mb-2">
-                  {post.category}
+                  {getCategoryLabel(post.category)}
                 </span>
                 <h3 className="font-serif text-lg text-stone-900 mb-2 line-clamp-2">
                   <Link

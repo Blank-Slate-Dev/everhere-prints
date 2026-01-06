@@ -146,16 +146,27 @@ export function generateProductMetadata({
     keywords,
   });
 
+  // Create a clean other object without undefined values
+  const otherMeta: Record<string, string> = {
+    'product:price:amount': String(priceMin),
+    'product:price:currency': SITE_CONFIG.currency,
+    'product:availability': 'in stock',
+    'product:condition': 'new',
+    'product:brand': SITE_CONFIG.name,
+  };
+
+  // Merge with existing other meta if present
+  if (baseMetadata.other && typeof baseMetadata.other === 'object') {
+    Object.entries(baseMetadata.other).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        otherMeta[key] = String(value);
+      }
+    });
+  }
+
   return {
     ...baseMetadata,
-    other: {
-      ...baseMetadata.other,
-      'product:price:amount': String(priceMin),
-      'product:price:currency': SITE_CONFIG.currency,
-      'product:availability': 'in stock',
-      'product:condition': 'new',
-      'product:brand': SITE_CONFIG.name,
-    },
+    other: otherMeta,
   };
 }
 

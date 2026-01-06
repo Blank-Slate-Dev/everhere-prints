@@ -13,7 +13,7 @@ import type { FAQItem } from '@/types/seo';
 export const metadata: Metadata = genMeta({
   title: PAGE_META.christmasGifts.title,
   description: PAGE_META.christmasGifts.description,
-  keywords: PAGE_META.X.keywords,
+  keywords: PAGE_META.christmasGifts.keywords,
   path: '/gifts/christmas-gifts',
   image: '/images/og/christmas-gifts.jpg',
 });

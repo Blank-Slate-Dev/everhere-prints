@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { generateMetadata as genMeta } from '@/lib/seo/metadata';
 import { Breadcrumbs, FAQSchema, JsonLd } from '@/components/seo';
 import { SITE_CONFIG } from '@/lib/seo/constants';
-import { PRODUCT_FAQS, WEBSITE_FAQS } from '@/components/seo/FAQSchema';
+import { PRODUCT_FAQS } from '@/components/seo/FAQSchema';
 import type { FAQItem } from '@/types/seo';
 
 export const metadata: Metadata = genMeta({
@@ -186,7 +186,7 @@ export default function FAQPage() {
               <h2 className="font-serif text-2xl text-stone-900 mb-6 pb-4 border-b border-stone-200">
                 {category.title}
               </h2>
-              <FAQSchema faqs={category.faqs} showUI={true} showSchema={false} />
+              <FAQSchema faqs={category.faqs} showUI={true} />
             </div>
           ))}
         </section>
