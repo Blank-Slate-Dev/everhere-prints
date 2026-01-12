@@ -1,7 +1,7 @@
 // src/components/create-australia/AustraliaOrderSummary.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { AustraliaMapCustomization, AustraliaProductSelection } from "@/types";
@@ -13,26 +13,61 @@ import { Lock, Truck, ShieldCheck } from "lucide-react";
 interface AustraliaOrderSummaryProps {
   customization: AustraliaMapCustomization;
   product: AustraliaProductSelection;
+  previewRef?: RefObject<HTMLDivElement | null>;
+  onCheckout?: () => Promise<void>;
+  isLoading?: boolean;
 }
 
 export default function AustraliaOrderSummary({
   customization,
   product,
+  previewRef,
+  onCheckout,
+  isLoading: externalIsLoading,
 }: AustraliaOrderSummaryProps) {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  
+  const [internalIsLoading, setInternalIsLoading] = useState(false);
+
+  // Use external loading state if provided, otherwise use internal
+  const isLoading = externalIsLoading !== undefined ? externalIsLoading : internalIsLoading;
+
   const sizeDetails = getSizeDetails(product.size);
   const colorConfig = getAustraliaMapColor(customization.colorId);
   const total = calculateTotal(product.size, product.frame);
   const isComplete = customization.location !== null;
 
-  const handleCheckout = async () => {
-    if (!isComplete || !customization.location) return;
-    
-    setIsLoading(true);
+  // Capture preview image using html2canvas
+  const capturePreviewImage = async (): Promise<string | undefined> => {
+    if (!previewRef?.current) return undefined;
 
     try {
+      // Dynamically import html2canvas to avoid SSR issues
+      const html2canvas = (await import("html2canvas")).default;
+      
+      const canvas = await html2canvas(previewRef.current, {
+        backgroundColor: null,
+        scale: 2, // Higher quality
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+      });
+      
+      return canvas.toDataURL("image/jpeg", 0.85);
+    } catch (error) {
+      console.error("Failed to capture preview:", error);
+      return undefined;
+    }
+  };
+
+  const internalHandleCheckout = async () => {
+    if (!isComplete || !customization.location) return;
+
+    setInternalIsLoading(true);
+
+    try {
+      // Capture the preview image
+      const previewImage = await capturePreviewImage();
+
       // Build product description
       const descriptionParts = [
         `Australia Map - ${colorConfig.name}`,
@@ -68,18 +103,21 @@ export default function AustraliaOrderSummary({
         total: total,
         metadata,
         returnPath: "/create-australia",
+        previewImage, // Include the captured preview
       };
 
       // Store in sessionStorage and navigate
       sessionStorage.setItem("checkoutOrder", JSON.stringify(orderData));
       router.push("/checkout");
-      
     } catch (error) {
       console.error("Checkout error:", error);
       alert("Something went wrong. Please try again.");
-      setIsLoading(false);
+      setInternalIsLoading(false);
     }
   };
+
+  // Use external checkout handler if provided, otherwise use internal
+  const handleCheckout = onCheckout || internalHandleCheckout;
 
   return (
     <motion.div

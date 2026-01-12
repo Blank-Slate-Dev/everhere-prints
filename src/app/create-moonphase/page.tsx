@@ -4,7 +4,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PrintSize, FrameOption, MoonPhaseCustomization, MoonPhaseProductSelection } from "@/types";
-import { priceConfig, calculateTotal } from "@/lib/pricing";
+import { priceConfig } from "@/lib/pricing";
 import MoonPhasePrintPreview from "@/components/create-moonphase/MoonPhasePrintPreview";
 import MoonPhaseMiniPreview from "@/components/create-moonphase/MoonPhaseMiniPreview";
 import MoonPhaseDatePicker from "@/components/create-moonphase/MoonPhaseDatePicker";
@@ -32,7 +32,6 @@ export default function CreateMoonPhasePage() {
     frame: priceConfig.frames[0],
   });
 
-  const [isLoading, setIsLoading] = useState(false);
   const [showMiniPreview, setShowMiniPreview] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -124,49 +123,6 @@ export default function CreateMoonPhasePage() {
   const handleFrameChange = useCallback((frame: FrameOption) => {
     setProduct((prev) => ({ ...prev, frame }));
   }, []);
-
-  // Checkout handler
-  const handleCheckout = async () => {
-    setIsLoading(true);
-
-    try {
-      const total = calculateTotal(product.size, product.frame);
-
-      const response = await fetch("/api/checkout-moonphase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customization: {
-            ...customization,
-            date: customization.date.toISOString(),
-          },
-          product,
-          totalPrice: total,
-        }),
-      });
-
-      const { url, error } = await response.json();
-
-      if (error) {
-        console.error("Checkout error:", error);
-        alert("Something went wrong. Please try again.");
-        setIsLoading(false);
-        return;
-      }
-
-      if (url) {
-        window.location.href = url;
-      } else {
-        console.error("No checkout URL returned");
-        alert("Something went wrong. Please try again.");
-        setIsLoading(false);
-      }
-    } catch (err) {
-      console.error("Checkout error:", err);
-      alert("Something went wrong. Please try again.");
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen pt-20 lg:pt-24 bg-cream">
@@ -275,12 +231,11 @@ export default function CreateMoonPhasePage() {
               />
             </div>
 
-            {/* Order Summary */}
+            {/* Order Summary - pass previewRef for image capture */}
             <MoonPhaseOrderSummary
               customization={customization}
               product={product}
-              onCheckout={handleCheckout}
-              isLoading={isLoading}
+              previewRef={previewRef}
             />
           </motion.div>
         </div>

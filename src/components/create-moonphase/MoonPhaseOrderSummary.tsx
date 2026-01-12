@@ -1,58 +1,78 @@
 // src/components/create-moonphase/MoonPhaseOrderSummary.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MoonPhaseCustomization, MoonPhaseProductSelection } from "@/types";
 import { calculateTotal, formatPrice, getSizeDetails } from "@/lib/pricing";
-import { getMoonPhaseStyle } from "@/lib/moonPhaseConfig";
-import { calculateMoonPhase } from "@/lib/moonPhaseCalculations";
+import { moonPhaseStyles } from "@/lib/moonPhaseConfig";
 import Button from "@/components/ui/Button";
-import { Lock, Truck, Moon, ShieldCheck } from "lucide-react";
+import { Lock, Truck, ShieldCheck } from "lucide-react";
 
 interface MoonPhaseOrderSummaryProps {
   customization: MoonPhaseCustomization;
   product: MoonPhaseProductSelection;
+  previewRef?: RefObject<HTMLDivElement | null>;
+  onCheckout?: () => Promise<void>;
+  isLoading?: boolean;
 }
 
 export default function MoonPhaseOrderSummary({
   customization,
   product,
+  previewRef,
+  onCheckout,
+  isLoading: externalIsLoading,
 }: MoonPhaseOrderSummaryProps) {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  
+  const [internalIsLoading, setInternalIsLoading] = useState(false);
+
+  // Use external loading state if provided, otherwise use internal
+  const isLoading = externalIsLoading !== undefined ? externalIsLoading : internalIsLoading;
+
   const sizeDetails = getSizeDetails(product.size);
-  const styleConfig = getMoonPhaseStyle(customization.styleId);
+  const styleConfig = moonPhaseStyles.find((s) => s.id === customization.styleId) || moonPhaseStyles[0];
   const total = calculateTotal(product.size, product.frame);
-
-  const moonData = useMemo(
-    () => calculateMoonPhase(customization.date),
-    [customization.date]
-  );
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-AU", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  };
-
-  // Moon phase print is always complete (just needs a date which has a default)
+  
+  // Moon phase prints don't require a location - just a date
   const isComplete = true;
 
-  const handleCheckout = async () => {
-    if (!isComplete) return;
-    
-    setIsLoading(true);
+  // Capture preview image using html2canvas
+  const capturePreviewImage = async (): Promise<string | undefined> => {
+    if (!previewRef?.current) return undefined;
 
     try {
+      // Dynamically import html2canvas to avoid SSR issues
+      const html2canvas = (await import("html2canvas")).default;
+      
+      const canvas = await html2canvas(previewRef.current, {
+        backgroundColor: null,
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+      });
+      
+      return canvas.toDataURL("image/jpeg", 0.85);
+    } catch (error) {
+      console.error("Failed to capture preview:", error);
+      return undefined;
+    }
+  };
+
+  const internalHandleCheckout = async () => {
+    if (!isComplete) return;
+
+    setInternalIsLoading(true);
+
+    try {
+      // Capture the preview image
+      const previewImage = await capturePreviewImage();
+
       // Build product description
       const descriptionParts = [
         `Moon Phase - ${styleConfig.name}`,
-        `${moonData.phaseName}`,
         `${sizeDetails.name} Print (${sizeDetails.dimensions})`,
         product.frame.id !== "none" ? `with ${product.frame.name}` : "Print Only",
       ];
@@ -60,12 +80,9 @@ export default function MoonPhaseOrderSummary({
       // Build metadata for order
       const metadata: Record<string, string> = {
         product_type: "moon_phase",
-        date: customization.date.toISOString(),
-        formatted_date: formatDate(customization.date),
         style_id: customization.styleId,
         style_name: styleConfig.name,
-        phase_name: moonData.phaseName,
-        phase_illumination: moonData.illumination.toFixed(1),
+        date: customization.date.toISOString(),
         title: customization.title || "",
         subtitle: customization.subtitle || "",
         date_text: customization.dateText || "",
@@ -88,18 +105,21 @@ export default function MoonPhaseOrderSummary({
         total: total,
         metadata,
         returnPath: "/create-moonphase",
+        previewImage,
       };
 
       // Store in sessionStorage and navigate
       sessionStorage.setItem("checkoutOrder", JSON.stringify(orderData));
       router.push("/checkout");
-      
     } catch (error) {
       console.error("Checkout error:", error);
       alert("Something went wrong. Please try again.");
-      setIsLoading(false);
+      setInternalIsLoading(false);
     }
   };
+
+  // Use external checkout handler if provided, otherwise use internal
+  const handleCheckout = onCheckout || internalHandleCheckout;
 
   return (
     <motion.div
@@ -112,16 +132,10 @@ export default function MoonPhaseOrderSummary({
       {/* Line Items */}
       <div className="space-y-3 pb-4 border-b border-brand-100">
         <div className="flex justify-between text-sm">
-          <span className="text-brand-600 flex items-center gap-1.5">
-            <Moon size={14} />
+          <span className="text-brand-600">
             Moon Phase - {styleConfig.name}
           </span>
         </div>
-
-        <div className="text-xs text-brand-500 -mt-1 ml-5">
-          {moonData.phaseName} • {formatDate(customization.date)}
-        </div>
-
         <div className="flex justify-between text-sm">
           <span className="text-brand-600">
             {sizeDetails.name} Print ({sizeDetails.dimensions})
@@ -167,7 +181,7 @@ export default function MoonPhaseOrderSummary({
         Secure Checkout
       </Button>
 
-      {/* Trust Signals */}
+      {/* Trust Indicators */}
       <div className="mt-4 pt-4 border-t border-brand-100 space-y-2">
         <div className="flex items-center gap-2 text-xs text-brand-500">
           <Truck size={14} />
@@ -177,15 +191,6 @@ export default function MoonPhaseOrderSummary({
           <ShieldCheck size={14} />
           <span>Secure payment powered by Stripe</span>
         </div>
-      </div>
-
-      {/* Moon Phase Meaning */}
-      <div className="mt-4 p-3 bg-brand-50 rounded-lg">
-        <p className="text-xs text-brand-600 text-center">
-          <span className="font-medium">{moonData.phaseName}</span>
-          {" · "}
-          {moonData.illumination.toFixed(0)}% illuminated
-        </p>
       </div>
     </motion.div>
   );

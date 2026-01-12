@@ -10,7 +10,7 @@ import {
   AustraliaMapCustomization,
   AustraliaProductSelection,
 } from "@/types";
-import { priceConfig, calculateTotal } from "@/lib/pricing";
+import { priceConfig } from "@/lib/pricing";
 import AustraliaLocationSearch from "@/components/create-australia/AustraliaLocationSearch";
 import AustraliaPrintPreview from "@/components/create-australia/AustraliaPrintPreview";
 import AustraliaMiniPreview from "@/components/create-australia/AustraliaMiniPreview";
@@ -35,7 +35,6 @@ export default function CreateAustraliaPage() {
     frame: priceConfig.frames[0],
   });
 
-  const [isLoading, setIsLoading] = useState(false);
   const [showMiniPreview, setShowMiniPreview] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -103,45 +102,6 @@ export default function CreateAustraliaPage() {
   const handleFrameChange = useCallback((frame: FrameOption) => {
     setProduct((prev) => ({ ...prev, frame }));
   }, []);
-
-  const handleCheckout = async () => {
-    if (!customization.location) return;
-
-    setIsLoading(true);
-
-    try {
-      const response = await fetch("/api/checkout-australia", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customization,
-          product,
-          totalPrice: calculateTotal(product.size, product.frame),
-        }),
-      });
-
-      const { url, error } = await response.json();
-
-      if (error) {
-        console.error("Checkout error:", error);
-        alert("Something went wrong. Please try again.");
-        setIsLoading(false);
-        return;
-      }
-
-      if (url) {
-        window.location.href = url;
-      } else {
-        console.error("No checkout URL returned");
-        alert("Something went wrong. Please try again.");
-        setIsLoading(false);
-      }
-    } catch (err) {
-      console.error("Checkout error:", err);
-      alert("Something went wrong. Please try again.");
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen pt-20 lg:pt-24 bg-cream">
@@ -239,12 +199,11 @@ export default function CreateAustraliaPage() {
               />
             </div>
 
-            {/* Order Summary */}
+            {/* Order Summary - pass previewRef for image capture */}
             <AustraliaOrderSummary
               customization={customization}
               product={product}
-              onCheckout={handleCheckout}
-              isLoading={isLoading}
+              previewRef={previewRef}
             />
           </motion.div>
         </div>

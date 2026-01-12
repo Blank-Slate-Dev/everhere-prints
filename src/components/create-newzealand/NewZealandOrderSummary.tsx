@@ -1,7 +1,7 @@
 // src/components/create-newzealand/NewZealandOrderSummary.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { NewZealandMapCustomization, NewZealandProductSelection } from "@/types";
@@ -13,26 +13,61 @@ import { Lock, Truck, ShieldCheck } from "lucide-react";
 interface NewZealandOrderSummaryProps {
   customization: NewZealandMapCustomization;
   product: NewZealandProductSelection;
+  previewRef?: RefObject<HTMLDivElement | null>;
+  onCheckout?: () => Promise<void>;
+  isLoading?: boolean;
 }
 
 export default function NewZealandOrderSummary({
   customization,
   product,
+  previewRef,
+  onCheckout,
+  isLoading: externalIsLoading,
 }: NewZealandOrderSummaryProps) {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  
+  const [internalIsLoading, setInternalIsLoading] = useState(false);
+
+  // Use external loading state if provided, otherwise use internal
+  const isLoading = externalIsLoading !== undefined ? externalIsLoading : internalIsLoading;
+
   const sizeDetails = getSizeDetails(product.size);
   const colorConfig = getNewZealandMapColor(customization.colorId);
   const total = calculateTotal(product.size, product.frame);
   const isComplete = customization.location !== null;
 
-  const handleCheckout = async () => {
-    if (!isComplete || !customization.location) return;
-    
-    setIsLoading(true);
+  // Capture preview image using html2canvas
+  const capturePreviewImage = async (): Promise<string | undefined> => {
+    if (!previewRef?.current) return undefined;
 
     try {
+      // Dynamically import html2canvas to avoid SSR issues
+      const html2canvas = (await import("html2canvas")).default;
+      
+      const canvas = await html2canvas(previewRef.current, {
+        backgroundColor: null,
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+      });
+      
+      return canvas.toDataURL("image/jpeg", 0.85);
+    } catch (error) {
+      console.error("Failed to capture preview:", error);
+      return undefined;
+    }
+  };
+
+  const internalHandleCheckout = async () => {
+    if (!isComplete || !customization.location) return;
+
+    setInternalIsLoading(true);
+
+    try {
+      // Capture the preview image
+      const previewImage = await capturePreviewImage();
+
       // Build product description
       const descriptionParts = [
         `New Zealand Map - ${colorConfig.name}`,
@@ -68,18 +103,21 @@ export default function NewZealandOrderSummary({
         total: total,
         metadata,
         returnPath: "/create-newzealand",
+        previewImage,
       };
 
       // Store in sessionStorage and navigate
       sessionStorage.setItem("checkoutOrder", JSON.stringify(orderData));
       router.push("/checkout");
-      
     } catch (error) {
       console.error("Checkout error:", error);
       alert("Something went wrong. Please try again.");
-      setIsLoading(false);
+      setInternalIsLoading(false);
     }
   };
+
+  // Use external checkout handler if provided, otherwise use internal
+  const handleCheckout = onCheckout || internalHandleCheckout;
 
   return (
     <motion.div
@@ -115,7 +153,7 @@ export default function NewZealandOrderSummary({
         )}
 
         <div className="flex justify-between text-sm">
-          <span className="text-brand-600">Delivery to NZ & Australia</span>
+          <span className="text-brand-600">Australian & NZ Delivery</span>
           <span className="font-medium text-green-600">Free</span>
         </div>
       </div>
@@ -151,7 +189,7 @@ export default function NewZealandOrderSummary({
       <div className="mt-4 pt-4 border-t border-brand-100 space-y-2">
         <div className="flex items-center gap-2 text-xs text-brand-500">
           <Truck size={14} />
-          <span>Free shipping to NZ & Australia</span>
+          <span>Free shipping to Australia & New Zealand</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-brand-500">
           <ShieldCheck size={14} />

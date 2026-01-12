@@ -4,7 +4,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapLocation, MapStyle, PrintSize, FrameOption, PrintCustomization, ProductSelection } from "@/types";
-import { priceConfig, calculateTotal } from "@/lib/pricing";
+import { priceConfig } from "@/lib/pricing";
 import LocationSearch from "@/components/create/LocationSearch";
 import PrintPreview from "@/components/create/PrintPreview";
 import StyleSelector from "@/components/create/StyleSelector";
@@ -31,7 +31,6 @@ export default function CreatePage() {
     frame: priceConfig.frames[0],
   });
 
-  const [isLoading, setIsLoading] = useState(false);
   const [showMiniPreview, setShowMiniPreview] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -42,7 +41,6 @@ export default function CreatePage() {
       
       const previewRect = previewRef.current.getBoundingClientRect();
       const previewCenter = previewRect.top + previewRect.height / 2;
-      const viewportCenter = window.innerHeight / 2;
       
       // Show mini preview when main preview center is above viewport
       setShowMiniPreview(previewCenter < -50);
@@ -102,45 +100,6 @@ export default function CreatePage() {
   const handleFrameChange = useCallback((frame: FrameOption) => {
     setProduct((prev) => ({ ...prev, frame }));
   }, []);
-
-  const handleCheckout = async () => {
-    if (!customization.location) return;
-
-    setIsLoading(true);
-
-    try {
-      const response = await fetch("/api/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customization,
-          product,
-          totalPrice: calculateTotal(product.size, product.frame),
-        }),
-      });
-
-      const { url, error } = await response.json();
-
-      if (error) {
-        console.error("Checkout error:", error);
-        alert("Something went wrong. Please try again.");
-        setIsLoading(false);
-        return;
-      }
-
-      if (url) {
-        window.location.href = url;
-      } else {
-        console.error("No checkout URL returned");
-        alert("Something went wrong. Please try again.");
-        setIsLoading(false);
-      }
-    } catch (err) {
-      console.error("Checkout error:", err);
-      alert("Something went wrong. Please try again.");
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen pt-20 lg:pt-24 bg-cream">
@@ -244,12 +203,11 @@ export default function CreatePage() {
               />
             </div>
 
-            {/* Order Summary */}
+            {/* Order Summary - pass previewRef for image capture */}
             <OrderSummary
               customization={customization}
               product={product}
-              onCheckout={handleCheckout}
-              isLoading={isLoading}
+              previewRef={previewRef}
             />
           </motion.div>
         </div>

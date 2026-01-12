@@ -1,46 +1,73 @@
 // src/components/create-starmap/StarMapOrderSummary.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, RefObject } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { StarMapCustomization, StarMapProductSelection } from "@/types";
 import { calculateTotal, formatPrice, getSizeDetails } from "@/lib/pricing";
-import { getStarMapStyle } from "@/lib/starMapConfig";
+import { starMapStyles } from "@/lib/starMapConfig";
 import Button from "@/components/ui/Button";
-import { Lock, Truck, Star, ShieldCheck } from "lucide-react";
+import { Lock, Truck, ShieldCheck } from "lucide-react";
 
 interface StarMapOrderSummaryProps {
   customization: StarMapCustomization;
   product: StarMapProductSelection;
+  previewRef?: RefObject<HTMLDivElement | null>;
+  onCheckout?: () => Promise<void>;
+  isLoading?: boolean;
 }
 
 export default function StarMapOrderSummary({
   customization,
   product,
+  previewRef,
+  onCheckout,
+  isLoading: externalIsLoading,
 }: StarMapOrderSummaryProps) {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  
+  const [internalIsLoading, setInternalIsLoading] = useState(false);
+
+  // Use external loading state if provided, otherwise use internal
+  const isLoading = externalIsLoading !== undefined ? externalIsLoading : internalIsLoading;
+
   const sizeDetails = getSizeDetails(product.size);
-  const styleConfig = getStarMapStyle(customization.styleId);
+  const styleConfig = starMapStyles.find((s) => s.id === customization.styleId) || starMapStyles[0];
   const total = calculateTotal(product.size, product.frame);
   const isComplete = customization.location !== null;
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-AU", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-  };
-
-  const handleCheckout = async () => {
-    if (!isComplete || !customization.location) return;
-    
-    setIsLoading(true);
+  // Capture preview image using html2canvas
+  const capturePreviewImage = async (): Promise<string | undefined> => {
+    if (!previewRef?.current) return undefined;
 
     try {
+      // Dynamically import html2canvas to avoid SSR issues
+      const html2canvas = (await import("html2canvas")).default;
+      
+      const canvas = await html2canvas(previewRef.current, {
+        backgroundColor: null,
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+      });
+      
+      return canvas.toDataURL("image/jpeg", 0.85);
+    } catch (error) {
+      console.error("Failed to capture preview:", error);
+      return undefined;
+    }
+  };
+
+  const internalHandleCheckout = async () => {
+    if (!isComplete || !customization.location) return;
+
+    setInternalIsLoading(true);
+
+    try {
+      // Capture the preview image
+      const previewImage = await capturePreviewImage();
+
       // Build product description
       const descriptionParts = [
         `Star Map - ${styleConfig.name}`,
@@ -54,10 +81,10 @@ export default function StarMapOrderSummary({
         location_name: customization.location.placeName,
         latitude: customization.location.latitude.toString(),
         longitude: customization.location.longitude.toString(),
-        date: customization.date.toISOString(),
-        time: customization.time,
         style_id: customization.styleId,
         style_name: styleConfig.name,
+        date: customization.date.toISOString(),
+        time: customization.time,
         title: customization.title || "",
         subtitle: customization.subtitle || "",
         date_text: customization.dateText || "",
@@ -65,6 +92,7 @@ export default function StarMapOrderSummary({
         show_constellation_names: customization.showConstellationNames.toString(),
         show_grid: customization.showGrid.toString(),
         show_milky_way: customization.showMilkyWay.toString(),
+        show_cardinals: customization.showCardinals.toString(),
         size: product.size,
         frame: product.frame.id,
       };
@@ -82,18 +110,21 @@ export default function StarMapOrderSummary({
         total: total,
         metadata,
         returnPath: "/create-starmap",
+        previewImage,
       };
 
       // Store in sessionStorage and navigate
       sessionStorage.setItem("checkoutOrder", JSON.stringify(orderData));
       router.push("/checkout");
-      
     } catch (error) {
       console.error("Checkout error:", error);
       alert("Something went wrong. Please try again.");
-      setIsLoading(false);
+      setInternalIsLoading(false);
     }
   };
+
+  // Use external checkout handler if provided, otherwise use internal
+  const handleCheckout = onCheckout || internalHandleCheckout;
 
   return (
     <motion.div
@@ -106,18 +137,10 @@ export default function StarMapOrderSummary({
       {/* Line Items */}
       <div className="space-y-3 pb-4 border-b border-brand-100">
         <div className="flex justify-between text-sm">
-          <span className="text-brand-600 flex items-center gap-1.5">
-            <Star size={14} />
+          <span className="text-brand-600">
             Star Map - {styleConfig.name}
           </span>
         </div>
-
-        {customization.location && (
-          <div className="text-xs text-brand-500 -mt-1 ml-5">
-            {formatDate(customization.date)} at {customization.time}
-          </div>
-        )}
-
         <div className="flex justify-between text-sm">
           <span className="text-brand-600">
             {sizeDetails.name} Print ({sizeDetails.dimensions})
@@ -137,7 +160,7 @@ export default function StarMapOrderSummary({
         )}
 
         <div className="flex justify-between text-sm">
-          <span className="text-brand-600">Delivery (AU & NZ)</span>
+          <span className="text-brand-600">Australian Delivery</span>
           <span className="font-medium text-green-600">Free</span>
         </div>
       </div>
@@ -173,7 +196,7 @@ export default function StarMapOrderSummary({
       <div className="mt-4 pt-4 border-t border-brand-100 space-y-2">
         <div className="flex items-center gap-2 text-xs text-brand-500">
           <Truck size={14} />
-          <span>Free shipping to Australia & New Zealand</span>
+          <span>Free shipping on all Australian orders</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-brand-500">
           <ShieldCheck size={14} />
@@ -184,7 +207,7 @@ export default function StarMapOrderSummary({
       {/* Location Warning */}
       {!isComplete && (
         <p className="mt-4 text-center text-sm text-brand-500">
-          Please search for a location to see your night sky.
+          Please search for a location to complete your print.
         </p>
       )}
     </motion.div>
