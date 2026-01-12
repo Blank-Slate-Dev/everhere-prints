@@ -2,6 +2,7 @@
 import Hero from "@/components/home/Hero";
 import HowItWorks from "@/components/home/HowItWorks";
 import Features from "@/components/home/Features";
+import FeaturedStory from "@/components/home/FeaturedStory";
 import LifestyleShowcase from "@/components/home/LifestyleShowcase";
 import Testimonials from "@/components/home/Testimonials";
 import Link from "next/link";
@@ -13,6 +14,7 @@ export default function Home() {
       <Hero />
       <HowItWorks />
       <Features />
+      <FeaturedStory />
       <LifestyleShowcase />
       <Testimonials />
 
