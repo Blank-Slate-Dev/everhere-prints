@@ -1,28 +1,28 @@
 // src/components/create-moonphase/MoonPhaseOrderSummary.tsx
 "use client";
 
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MoonPhaseCustomization, MoonPhaseProductSelection } from "@/types";
 import { calculateTotal, formatPrice, getSizeDetails } from "@/lib/pricing";
 import { getMoonPhaseStyle } from "@/lib/moonPhaseConfig";
 import { calculateMoonPhase } from "@/lib/moonPhaseCalculations";
 import Button from "@/components/ui/Button";
-import { Lock, Truck, Moon } from "lucide-react";
+import { Lock, Truck, Moon, ShieldCheck } from "lucide-react";
 
 interface MoonPhaseOrderSummaryProps {
   customization: MoonPhaseCustomization;
   product: MoonPhaseProductSelection;
-  onCheckout: () => void;
-  isLoading: boolean;
 }
 
 export default function MoonPhaseOrderSummary({
   customization,
   product,
-  onCheckout,
-  isLoading,
 }: MoonPhaseOrderSummaryProps) {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  
   const sizeDetails = getSizeDetails(product.size);
   const styleConfig = getMoonPhaseStyle(customization.styleId);
   const total = calculateTotal(product.size, product.frame);
@@ -42,6 +42,64 @@ export default function MoonPhaseOrderSummary({
 
   // Moon phase print is always complete (just needs a date which has a default)
   const isComplete = true;
+
+  const handleCheckout = async () => {
+    if (!isComplete) return;
+    
+    setIsLoading(true);
+
+    try {
+      // Build product description
+      const descriptionParts = [
+        `Moon Phase - ${styleConfig.name}`,
+        `${moonData.phaseName}`,
+        `${sizeDetails.name} Print (${sizeDetails.dimensions})`,
+        product.frame.id !== "none" ? `with ${product.frame.name}` : "Print Only",
+      ];
+
+      // Build metadata for order
+      const metadata: Record<string, string> = {
+        product_type: "moon_phase",
+        date: customization.date.toISOString(),
+        formatted_date: formatDate(customization.date),
+        style_id: customization.styleId,
+        style_name: styleConfig.name,
+        phase_name: moonData.phaseName,
+        phase_illumination: moonData.illumination.toFixed(1),
+        title: customization.title || "",
+        subtitle: customization.subtitle || "",
+        date_text: customization.dateText || "",
+        show_stars: customization.showStars.toString(),
+        show_phase_label: customization.showPhaseLabel.toString(),
+        size: product.size,
+        frame: product.frame.id,
+      };
+
+      // Store order data for checkout page
+      const orderData = {
+        productType: "moon_phase",
+        productName: "EverHere Prints - Moon Phase",
+        productDescription: descriptionParts.join(" | "),
+        size: product.size,
+        frame: product.frame.id,
+        frameName: product.frame.name,
+        subtotal: total,
+        shipping: 0,
+        total: total,
+        metadata,
+        returnPath: "/create-moonphase",
+      };
+
+      // Store in sessionStorage and navigate
+      sessionStorage.setItem("checkoutOrder", JSON.stringify(orderData));
+      router.push("/checkout");
+      
+    } catch (error) {
+      console.error("Checkout error:", error);
+      alert("Something went wrong. Please try again.");
+      setIsLoading(false);
+    }
+  };
 
   return (
     <motion.div
@@ -100,24 +158,25 @@ export default function MoonPhaseOrderSummary({
       <Button
         fullWidth
         size="lg"
-        onClick={onCheckout}
-        disabled={!isComplete}
+        onClick={handleCheckout}
+        disabled={!isComplete || isLoading}
         isLoading={isLoading}
         className="mt-2"
       >
-        {isComplete ? "Proceed to Checkout" : "Complete Your Design"}
+        <Lock size={18} className="mr-2" />
+        Secure Checkout
       </Button>
 
       {/* Trust Signals */}
-      <div className="mt-4 flex items-center justify-center gap-4 text-xs text-brand-500">
-        <span className="flex items-center gap-1">
-          <Lock size={12} />
-          Secure Checkout
-        </span>
-        <span className="flex items-center gap-1">
-          <Truck size={12} />
-          Free Shipping
-        </span>
+      <div className="mt-4 pt-4 border-t border-brand-100 space-y-2">
+        <div className="flex items-center gap-2 text-xs text-brand-500">
+          <Truck size={14} />
+          <span>Free shipping on all Australian orders</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-brand-500">
+          <ShieldCheck size={14} />
+          <span>Secure payment powered by Stripe</span>
+        </div>
       </div>
 
       {/* Moon Phase Meaning */}

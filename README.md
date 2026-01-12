@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EverHere Prints - Admin Portal & Print Export System
 
-## Getting Started
+## What's Included
 
-First, run the development server:
+### Print Export System
+High-resolution print export for A4, A3, and A2 sizes at 300 DPI.
+
+- `src/lib/printExport.ts` - DPI calculations and size configurations
+- `src/lib/soundWaveSvgGenerator.ts` - Generates vector SVG for Sound Wave prints
+- `src/hooks/usePrintExport.ts` - React hook for export functionality
+- `src/components/create/ExportButton.tsx` - Export UI component with quality selector
+- `src/components/create-soundwave/SoundWaveExportSection.tsx` - Integration example
+- `src/app/api/export/print/route.ts` - API endpoint for SVG → PNG conversion
+
+### Admin Portal
+Secure admin dashboard for managing orders and generating print files.
+
+- `src/lib/adminAuth.ts` - JWT authentication utilities
+- `src/middleware.ts` - Route protection middleware
+- `src/app/api/admin/auth/route.ts` - Login/logout API endpoints
+- `src/app/admin/login/page.tsx` - Login page
+- `src/app/admin/layout.tsx` - Admin layout with sidebar
+- `src/app/admin/page.tsx` - Dashboard overview
+- `src/app/admin/orders/page.tsx` - Order management
+- `src/app/admin/print-queue/page.tsx` - Print queue management
+
+## Installation
+
+### 1. Install Dependencies
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install jose sharp
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Copy Files
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Copy the `src` folder contents to your project, merging with existing files.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Environment Variables (Optional)
 
-## Learn More
+Add to `.env.local`:
 
-To learn more about Next.js, take a look at the following resources:
+```env
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=Bluezoomer30!
+JWT_SECRET=your-super-secret-key-change-this-in-production
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Usage
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Admin Login
 
-## Deploy on Vercel
+- **URL:** `/admin/login`
+- **Username:** `admin`
+- **Password:** `Bluezoomer30!`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Print Export Sizes (300 DPI)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Size | Dimensions | Est. File Size |
+|------|------------|----------------|
+| A4 | 2,480 × 3,508 px | ~4 MB |
+| A3 | 3,508 × 4,961 px | ~8 MB |
+| A2 | 4,961 × 7,016 px | ~16 MB |
+
+### Adding Export to Sound Wave Page
+
+```tsx
+import SoundWaveExportSection from "@/components/create-soundwave/SoundWaveExportSection";
+
+// In your component:
+<SoundWaveExportSection 
+  customization={customization} 
+  product={product} 
+/>
+```
+
+## Security Notes
+
+- JWT tokens expire after 24 hours
+- Cookies are HTTP-only and secure in production
+- Change the default credentials and JWT secret in production!

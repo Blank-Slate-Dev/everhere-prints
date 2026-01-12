@@ -1,8 +1,10 @@
 // src/components/create-soundwave/SoundWaveOrderSummary.tsx
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ShoppingBag, Truck, Shield, AlertCircle } from "lucide-react";
+import { ShoppingBag, Truck, Shield, AlertCircle, Lock, ShieldCheck } from "lucide-react";
 import { SoundWaveCustomization, SoundWaveProductSelection } from "@/types";
 import { calculateTotal, formatPrice, getSizeDetails } from "@/lib/pricing";
 import { getSoundWaveStyle } from "@/lib/soundWaveConfig";
@@ -12,22 +14,106 @@ import Button from "@/components/ui/Button";
 interface SoundWaveOrderSummaryProps {
   customization: SoundWaveCustomization;
   product: SoundWaveProductSelection;
-  onCheckout: () => void;
-  isLoading: boolean;
 }
 
 export default function SoundWaveOrderSummary({
   customization,
   product,
-  onCheckout,
-  isLoading,
 }: SoundWaveOrderSummaryProps) {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  
   const { size, frame } = product;
   const sizeDetails = getSizeDetails(size);
   const style = getSoundWaveStyle(customization.styleId);
   const total = calculateTotal(size, frame);
   const hasAudio = customization.waveformData.length > 0;
   const hasLyrics = customization.showLyrics && customization.selectedLyrics.length > 0;
+  const hasTitle = customization.title.trim().length > 0;
+  const isComplete = hasAudio && hasTitle;
+
+  const handleCheckout = async () => {
+    if (!isComplete) return;
+    
+    setIsLoading(true);
+
+    try {
+      // Build product description
+      const descriptionParts = [
+        `${sizeDetails.name} Print (${sizeDetails.dimensions})`,
+        frame.id !== "none" ? `with ${frame.name}` : "Print Only",
+        `${style.name} Style`,
+      ];
+      
+      if (hasLyrics) {
+        descriptionParts.push(`with ${customization.selectedLyrics.length} lyric lines`);
+      }
+
+      // Build metadata for order
+      const metadata: Record<string, string> = {
+        product_type: "sound_wave",
+        style_id: customization.styleId,
+        style_name: style.name,
+        title: customization.title || "",
+        subtitle: customization.subtitle || "",
+        date_text: customization.dateText || "",
+        audio_file_name: customization.audioFileName || "",
+        audio_duration: customization.audioDuration.toString(),
+        waveform_sample_count: customization.waveformData.length.toString(),
+        waveform_position: customization.waveformPosition.toString(),
+        show_album_art: customization.showAlbumArt.toString(),
+        show_artist_name: customization.showArtistName.toString(),
+        show_album_name: customization.showAlbumName.toString(),
+        show_duration: customization.showDuration.toString(),
+        show_lyrics: customization.showLyrics.toString(),
+        size: size,
+        frame: frame.id,
+      };
+
+      // Add song data if available
+      if (customization.songData) {
+        metadata.track_id = customization.songData.trackId;
+        metadata.song_name = customization.songData.songName;
+        metadata.artist_name = customization.songData.artistName;
+        metadata.album_name = customization.songData.albumName;
+        metadata.album_art_url = customization.songData.albumArtUrl || "";
+        metadata.song_duration_ms = customization.songData.durationMs.toString();
+      }
+
+      // Add lyrics
+      if (hasLyrics) {
+        metadata.lyrics_count = customization.selectedLyrics.length.toString();
+        customization.selectedLyrics.forEach((line, index) => {
+          metadata[`lyric_line_${index + 1}`] = line.slice(0, 200);
+        });
+      }
+
+      // Store order data for checkout page
+      const orderData = {
+        productType: "sound_wave",
+        productName: "EverHere Prints - Sound Wave Art",
+        productDescription: descriptionParts.join(" | "),
+        size: size,
+        frame: frame.id,
+        frameName: frame.name,
+        subtotal: total,
+        shipping: 0,
+        total: total,
+        metadata,
+        returnPath: "/create-soundwave",
+        previewImage: customization.songData?.albumArtUrl || undefined,
+      };
+
+      // Store in sessionStorage and navigate
+      sessionStorage.setItem("checkoutOrder", JSON.stringify(orderData));
+      router.push("/checkout");
+      
+    } catch (error) {
+      console.error("Checkout error:", error);
+      alert("Something went wrong. Please try again.");
+      setIsLoading(false);
+    }
+  };
 
   return (
     <motion.div
@@ -130,14 +216,22 @@ export default function SoundWaveOrderSummary({
       {!hasAudio && (
         <div className="mb-4 flex items-center gap-2 text-amber-600 bg-amber-50 px-4 py-3 rounded-lg">
           <AlertCircle size={18} />
-          <p className="text-sm">Please upload your audio file to continue</p>
+          <p className="text-sm">Please upload or search for audio to continue</p>
+        </div>
+      )}
+
+      {/* Title Required Warning */}
+      {hasAudio && !hasTitle && (
+        <div className="mb-4 flex items-center gap-2 text-amber-600 bg-amber-50 px-4 py-3 rounded-lg">
+          <AlertCircle size={18} />
+          <p className="text-sm">Please add a title to continue</p>
         </div>
       )}
 
       {/* Checkout Button */}
       <Button
-        onClick={onCheckout}
-        disabled={isLoading || !hasAudio}
+        onClick={handleCheckout}
+        disabled={isLoading || !isComplete}
         className="w-full"
         size="lg"
       >
@@ -151,24 +245,29 @@ export default function SoundWaveOrderSummary({
             </motion.span>
             Processing...
           </span>
+        ) : isComplete ? (
+          <span className="flex items-center gap-2">
+            <Lock size={18} />
+            Secure Checkout
+          </span>
         ) : (
           <span className="flex items-center gap-2">
             <ShoppingBag size={18} />
-            Proceed to Checkout
+            Complete Your Design
           </span>
         )}
       </Button>
 
       {/* Trust Badges */}
-      <div className="mt-4 flex items-center justify-center gap-4 text-xs text-brand-400">
-        <span className="flex items-center gap-1">
-          <Shield size={12} />
-          Secure Payment
-        </span>
-        <span className="flex items-center gap-1">
-          <Truck size={12} />
-          Free Shipping
-        </span>
+      <div className="mt-4 pt-4 border-t border-brand-100 space-y-2">
+        <div className="flex items-center gap-2 text-xs text-brand-500">
+          <Truck size={14} />
+          <span>Free shipping on all Australian orders</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-brand-500">
+          <ShieldCheck size={14} />
+          <span>Secure payment powered by Stripe</span>
+        </div>
       </div>
     </motion.div>
   );

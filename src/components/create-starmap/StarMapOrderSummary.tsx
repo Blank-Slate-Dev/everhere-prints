@@ -1,26 +1,27 @@
 // src/components/create-starmap/StarMapOrderSummary.tsx
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { StarMapCustomization, StarMapProductSelection } from "@/types";
 import { calculateTotal, formatPrice, getSizeDetails } from "@/lib/pricing";
 import { getStarMapStyle } from "@/lib/starMapConfig";
 import Button from "@/components/ui/Button";
-import { Lock, Truck, Star } from "lucide-react";
+import { Lock, Truck, Star, ShieldCheck } from "lucide-react";
 
 interface StarMapOrderSummaryProps {
   customization: StarMapCustomization;
   product: StarMapProductSelection;
-  onCheckout: () => void;
-  isLoading: boolean;
 }
 
 export default function StarMapOrderSummary({
   customization,
   product,
-  onCheckout,
-  isLoading,
 }: StarMapOrderSummaryProps) {
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  
   const sizeDetails = getSizeDetails(product.size);
   const styleConfig = getStarMapStyle(customization.styleId);
   const total = calculateTotal(product.size, product.frame);
@@ -32,6 +33,66 @@ export default function StarMapOrderSummary({
       month: "long",
       year: "numeric",
     });
+  };
+
+  const handleCheckout = async () => {
+    if (!isComplete || !customization.location) return;
+    
+    setIsLoading(true);
+
+    try {
+      // Build product description
+      const descriptionParts = [
+        `Star Map - ${styleConfig.name}`,
+        `${sizeDetails.name} Print (${sizeDetails.dimensions})`,
+        product.frame.id !== "none" ? `with ${product.frame.name}` : "Print Only",
+      ];
+
+      // Build metadata for order
+      const metadata: Record<string, string> = {
+        product_type: "star_map",
+        location_name: customization.location.placeName,
+        latitude: customization.location.latitude.toString(),
+        longitude: customization.location.longitude.toString(),
+        date: customization.date.toISOString(),
+        time: customization.time,
+        style_id: customization.styleId,
+        style_name: styleConfig.name,
+        title: customization.title || "",
+        subtitle: customization.subtitle || "",
+        date_text: customization.dateText || "",
+        show_constellations: customization.showConstellations.toString(),
+        show_constellation_names: customization.showConstellationNames.toString(),
+        show_grid: customization.showGrid.toString(),
+        show_milky_way: customization.showMilkyWay.toString(),
+        size: product.size,
+        frame: product.frame.id,
+      };
+
+      // Store order data for checkout page
+      const orderData = {
+        productType: "star_map",
+        productName: "EverHere Prints - Star Map",
+        productDescription: descriptionParts.join(" | "),
+        size: product.size,
+        frame: product.frame.id,
+        frameName: product.frame.name,
+        subtotal: total,
+        shipping: 0,
+        total: total,
+        metadata,
+        returnPath: "/create-starmap",
+      };
+
+      // Store in sessionStorage and navigate
+      sessionStorage.setItem("checkoutOrder", JSON.stringify(orderData));
+      router.push("/checkout");
+      
+    } catch (error) {
+      console.error("Checkout error:", error);
+      alert("Something went wrong. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -93,24 +154,31 @@ export default function StarMapOrderSummary({
       <Button
         fullWidth
         size="lg"
-        onClick={onCheckout}
-        disabled={!isComplete}
+        onClick={handleCheckout}
+        disabled={!isComplete || isLoading}
         isLoading={isLoading}
         className="mt-2"
       >
-        {isComplete ? "Proceed to Checkout" : "Select a Location First"}
+        {isComplete ? (
+          <>
+            <Lock size={18} className="mr-2" />
+            Secure Checkout
+          </>
+        ) : (
+          "Select a Location First"
+        )}
       </Button>
 
       {/* Trust Indicators */}
-      <div className="mt-4 flex items-center justify-center gap-4 text-xs text-brand-500">
-        <span className="flex items-center gap-1">
-          <Lock size={12} />
-          Secure Checkout
-        </span>
-        <span className="flex items-center gap-1">
-          <Truck size={12} />
-          5-7 Day Delivery
-        </span>
+      <div className="mt-4 pt-4 border-t border-brand-100 space-y-2">
+        <div className="flex items-center gap-2 text-xs text-brand-500">
+          <Truck size={14} />
+          <span>Free shipping to Australia & New Zealand</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-brand-500">
+          <ShieldCheck size={14} />
+          <span>Secure payment powered by Stripe</span>
+        </div>
       </div>
 
       {/* Location Warning */}
