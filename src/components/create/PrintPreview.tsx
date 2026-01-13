@@ -184,7 +184,7 @@ export default function PrintPreview({ customization, product, captureRef }: Pri
 
       {/* Floating Badge */}
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="absolute -right-2 top-8 md:-right-4 md:top-12 bg-charcoal text-white text-xs px-3 py-1.5 rounded-full shadow-lg z-10">
-        Live Preview
+        
       </motion.div>
 
       {/* ==================== HIDDEN CAPTURE ELEMENT ==================== */}
