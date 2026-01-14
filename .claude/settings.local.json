@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build:*)",
+      "Bash(npm install:*)",
+      "Bash(npx next build:*)",
+      "Bash(node:*)",
+      "Bash(npm --version:*)",
+      "Bash(NODE_OPTIONS=\"--stack-trace-limit=50\" npm run build:*)",
+      "Bash(npx next:*)",
+      "Bash(DEBUG=*)",
+      "Bash(npm ls:*)",
+      "Bash(set NODE_ENV=development)",
+      "Bash(npm run dev:*)",
+      "Bash(git stash:*)",
+      "Bash(git checkout:*)",
+      "Bash(set NEXT_TELEMETRY_DISABLED=1)",
+      "Bash(npx cross-env:*)",
+      "Bash($env:NEXT_DEBUG_BUILD=\"true\")",
+      "Bash(tee:*)",
+      "Bash(npx vercel build)"
+    ]
+  }
+}

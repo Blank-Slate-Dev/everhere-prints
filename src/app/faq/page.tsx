@@ -122,8 +122,10 @@ const faqCategories = [
 ];
 
 export default function FAQPage() {
-  // Combine all FAQs for schema
-  const allFaqs: FAQItem[] = faqCategories.flatMap((cat) => cat.faqs);
+  // Combine all FAQs for schema (filter out any undefined items)
+  const allFaqs: FAQItem[] = faqCategories
+    .flatMap((cat) => cat.faqs)
+    .filter((faq): faq is FAQItem => faq != null);
 
   const faqPageSchema = {
     '@context': 'https://schema.org',

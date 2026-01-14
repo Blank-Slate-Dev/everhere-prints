@@ -50,7 +50,7 @@ export function FAQSchema({
           </h2>
 
           <div className="space-y-4">
-            {faqs.map((faq, index) => (
+            {faqs.filter((faq) => faq != null).map((faq, index) => (
               <div
                 key={index}
                 className="border border-stone-200 rounded-lg overflow-hidden"
