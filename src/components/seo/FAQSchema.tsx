@@ -28,11 +28,19 @@ export function FAQSchema({
 }: FAQSchemaProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-  const schema = generateFAQSchema(faqs);
+  // Filter out undefined/null items from faqs array
+  const validFaqs = (faqs ?? []).filter((faq): faq is FAQItem => faq != null);
+
+  const schema = generateFAQSchema(validFaqs);
 
   const toggleFAQ = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
   };
+
+  // Don't render anything if no valid FAQs
+  if (validFaqs.length === 0) {
+    return null;
+  }
 
   return (
     <>
@@ -50,7 +58,7 @@ export function FAQSchema({
           </h2>
 
           <div className="space-y-4">
-            {faqs.filter((faq) => faq != null).map((faq, index) => (
+            {validFaqs.map((faq, index) => (
               <div
                 key={index}
                 className="border border-stone-200 rounded-lg overflow-hidden"

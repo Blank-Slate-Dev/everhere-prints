@@ -238,10 +238,11 @@ export function generateProductGroupSchema({
  * Generate FAQ schema
  */
 export function generateFAQSchema(faqs: FAQItem[]) {
+  const validFaqs = (faqs ?? []).filter((faq) => faq != null);
   return {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: faqs.map((faq) => ({
+    mainEntity: validFaqs.map((faq) => ({
       '@type': 'Question',
       name: faq.question,
       acceptedAnswer: {
