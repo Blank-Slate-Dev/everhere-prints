@@ -1,11 +1,30 @@
 // src/app/api/admin/orders/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { verifySessionToken } from "@/lib/adminAuth";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
+/**
+ * Verify admin authentication from request cookies
+ */
+async function verifyAdminAuth(request: NextRequest): Promise<boolean> {
+  const token = request.cookies.get("admin_session")?.value;
+  if (!token) return false;
+  return verifySessionToken(token);
+}
+
 export async function GET(request: NextRequest) {
   try {
+    // SECURITY: Verify admin authentication
+    const isAuthorized = await verifyAdminAuth(request);
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     // Fetch all PaymentIntents from Stripe
     const paymentIntents = await stripe.paymentIntents.list({
       limit: 100,
@@ -26,7 +45,11 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ orders });
   } catch (error) {
-    console.error("Stripe error:", error);
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    // SECURITY: Don't leak error details to client
+    console.error("Admin orders error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch orders" },
+      { status: 500 }
+    );
   }
 }

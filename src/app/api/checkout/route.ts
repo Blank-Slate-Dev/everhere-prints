@@ -1,25 +1,66 @@
 // src/app/api/checkout/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { PrintCustomization, ProductSelection } from "@/types";
-import { getSizeDetails } from "@/lib/pricing";
+import { PrintCustomization, ProductSelection, PrintSize } from "@/types";
+import { priceConfig, getSizeDetails } from "@/lib/pricing";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 interface CheckoutRequestBody {
   customization: PrintCustomization;
   product: ProductSelection;
-  totalPrice: number;
+  // SECURITY: totalPrice from client is now ignored - calculated server-side
+  totalPrice?: number;
+}
+
+/**
+ * SECURITY: Calculate price server-side to prevent price manipulation attacks
+ * Never trust price values from the client
+ */
+function calculateServerSidePrice(size: PrintSize, frameId: string): number {
+  // Validate size
+  const sizeConfig = priceConfig.sizes[size];
+  if (!sizeConfig) {
+    throw new Error(`Invalid size: ${size}`);
+  }
+
+  // Validate and get frame price
+  const frame = priceConfig.frames.find((f) => f.id === frameId);
+  if (!frame) {
+    throw new Error(`Invalid frame: ${frameId}`);
+  }
+
+  return sizeConfig.price + frame.price;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequestBody = await request.json();
-    const { customization, product, totalPrice } = body;
+    const { customization, product } = body;
 
+    // Validate required fields
     if (!customization.location) {
       return NextResponse.json(
         { error: "Location is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!product.size || !product.frame?.id) {
+      return NextResponse.json(
+        { error: "Product size and frame are required" },
+        { status: 400 }
+      );
+    }
+
+    // SECURITY: Calculate price server-side - ignore client-provided price
+    let serverCalculatedPrice: number;
+    try {
+      serverCalculatedPrice = calculateServerSidePrice(product.size, product.frame.id);
+    } catch (error) {
+      console.error("Price calculation error:", error);
+      return NextResponse.json(
+        { error: "Invalid product configuration" },
         { status: 400 }
       );
     }
@@ -34,7 +75,7 @@ export async function POST(request: NextRequest) {
       `| ${customization.style.charAt(0).toUpperCase() + customization.style.slice(1)} Style`,
     ].join(" ");
 
-    // Create Stripe Checkout Session
+    // Create Stripe Checkout Session with server-calculated price
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -63,7 +104,8 @@ export async function POST(request: NextRequest) {
                 frame: product.frame.id,
               },
             },
-            unit_amount: totalPrice,
+            // SECURITY: Use server-calculated price, not client-provided
+            unit_amount: serverCalculatedPrice,
           },
           quantity: 1,
         },
@@ -79,6 +121,8 @@ export async function POST(request: NextRequest) {
         date: customization.date,
         size: product.size,
         frame: product.frame.id,
+        // Store the calculated price for verification
+        calculated_price: serverCalculatedPrice.toString(),
       },
       success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/cancelled`,
@@ -86,6 +130,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error) {
+    // SECURITY: Don't leak error details to client
     console.error("Stripe checkout error:", error);
     return NextResponse.json(
       { error: "Failed to create checkout session" },

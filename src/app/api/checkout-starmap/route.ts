@@ -1,9 +1,10 @@
 // src/app/api/checkout-starmap/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { StarMapProductSelection } from "@/types";
+import { StarMapProductSelection, PrintSize } from "@/types";
 import { getSizeDetails } from "@/lib/pricing";
 import { getStarMapStyle } from "@/lib/starMapConfig";
+import { calculateProductPrice } from "@/lib/serverPricing";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -28,17 +29,41 @@ interface StarMapCustomizationPayload {
 interface CheckoutRequestBody {
   customization: StarMapCustomizationPayload;
   product: StarMapProductSelection;
-  totalPrice: number;
+  // SECURITY: totalPrice from client is ignored - calculated server-side
+  totalPrice?: number;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: CheckoutRequestBody = await request.json();
-    const { customization, product, totalPrice } = body;
+    const { customization, product } = body;
 
     if (!customization.location) {
       return NextResponse.json(
         { error: "Location is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!product.size || !product.frame?.id) {
+      return NextResponse.json(
+        { error: "Product size and frame are required" },
+        { status: 400 }
+      );
+    }
+
+    // SECURITY: Calculate price server-side
+    let serverCalculatedPrice: number;
+    try {
+      serverCalculatedPrice = calculateProductPrice(
+        "star_map",
+        product.size as PrintSize,
+        product.frame.id
+      );
+    } catch (error) {
+      console.error("Price calculation error:", error);
+      return NextResponse.json(
+        { error: "Invalid product configuration" },
         { status: 400 }
       );
     }
@@ -63,7 +88,7 @@ export async function POST(request: NextRequest) {
       product.frame.id !== "none" ? `with ${product.frame.name}` : "Print Only",
     ].join(" | ");
 
-    // Create Stripe Checkout Session
+    // Create Stripe Checkout Session with server-calculated price
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -92,14 +117,16 @@ export async function POST(request: NextRequest) {
                 subtitle: customization.subtitle,
                 date_text: customization.dateText,
                 show_constellations: customization.showConstellations.toString(),
-                show_constellation_names: customization.showConstellationNames.toString(),
+                show_constellation_names:
+                  customization.showConstellationNames.toString(),
                 show_grid: customization.showGrid.toString(),
                 show_milky_way: customization.showMilkyWay.toString(),
                 size: product.size,
                 frame: product.frame.id,
               },
             },
-            unit_amount: totalPrice,
+            // SECURITY: Use server-calculated price
+            unit_amount: serverCalculatedPrice,
           },
           quantity: 1,
         },
@@ -116,11 +143,13 @@ export async function POST(request: NextRequest) {
         subtitle: customization.subtitle,
         date_text: customization.dateText,
         show_constellations: customization.showConstellations.toString(),
-        show_constellation_names: customization.showConstellationNames.toString(),
+        show_constellation_names:
+          customization.showConstellationNames.toString(),
         show_grid: customization.showGrid.toString(),
         show_milky_way: customization.showMilkyWay.toString(),
         size: product.size,
         frame: product.frame.id,
+        calculated_price: serverCalculatedPrice.toString(),
       },
       success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/cancelled`,
@@ -128,6 +157,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error) {
+    // SECURITY: Don't leak error details
     console.error("Stripe checkout error:", error);
     return NextResponse.json(
       { error: "Failed to create checkout session" },

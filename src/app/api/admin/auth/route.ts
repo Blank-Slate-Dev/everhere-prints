@@ -1,20 +1,63 @@
 // src/app/api/admin/auth/route.ts
-// Admin authentication API endpoints
+// Admin authentication API endpoints with rate limiting
 
 import { NextRequest, NextResponse } from "next/server";
-import { 
-  verifyCredentials, 
-  createSessionToken, 
+import {
+  verifyCredentials,
+  createSessionToken,
   setSessionCookie,
   clearSessionCookie,
-  isAuthenticated 
+  isAuthenticated,
+  isRateLimited,
+  recordFailedAttempt,
+  clearRateLimit,
 } from "@/lib/adminAuth";
+
+/**
+ * Get client IP from request headers
+ */
+function getClientIp(request: NextRequest): string {
+  // Check various headers for the real IP (behind proxies/load balancers)
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    // Take the first IP in the list (original client)
+    return forwardedFor.split(",")[0].trim();
+  }
+
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) {
+    return realIp;
+  }
+
+  // Fallback - this might not be accurate behind proxies
+  return "unknown";
+}
 
 /**
  * POST /api/admin/auth - Login
  */
 export async function POST(request: NextRequest) {
+  const clientIp = getClientIp(request);
+
   try {
+    // SECURITY: Check rate limiting first
+    const rateLimitStatus = isRateLimited(clientIp);
+    if (rateLimitStatus.limited) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Too many login attempts. Please try again later.",
+          retryAfter: rateLimitStatus.retryAfter,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimitStatus.retryAfter || 1800),
+          },
+        }
+      );
+    }
+
     const body = await request.json();
     const { username, password } = body;
 
@@ -25,27 +68,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify credentials
+    // Verify credentials (uses constant-time comparison internally)
     if (!verifyCredentials(username, password)) {
-      // Add a small delay to prevent timing attacks
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Record failed attempt for rate limiting
+      recordFailedAttempt(clientIp);
+
+      // Add a consistent delay to prevent timing attacks
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       return NextResponse.json(
         { success: false, error: "Invalid credentials" },
         { status: 401 }
       );
     }
 
+    // Success - clear rate limit for this IP
+    clearRateLimit(clientIp);
+
     // Create session token
     const token = await createSessionToken();
-    
+
     // Set cookie
     await setSessionCookie(token);
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Login successful" 
+    // Log successful login (without sensitive data)
+    console.log(`Admin login successful from IP: ${clientIp}`);
+
+    return NextResponse.json({
+      success: true,
+      message: "Login successful",
     });
   } catch (error) {
+    // SECURITY: Don't leak error details
     console.error("Login error:", error);
     return NextResponse.json(
       { success: false, error: "Authentication failed" },
@@ -60,11 +114,12 @@ export async function POST(request: NextRequest) {
 export async function DELETE() {
   try {
     await clearSessionCookie();
-    return NextResponse.json({ 
-      success: true, 
-      message: "Logged out successfully" 
+    return NextResponse.json({
+      success: true,
+      message: "Logged out successfully",
     });
   } catch (error) {
+    // SECURITY: Don't leak error details
     console.error("Logout error:", error);
     return NextResponse.json(
       { success: false, error: "Logout failed" },
@@ -79,12 +134,12 @@ export async function DELETE() {
 export async function GET() {
   try {
     const authenticated = await isAuthenticated();
-    return NextResponse.json({ 
+    return NextResponse.json({
       authenticated,
     });
-  } catch (error) {
-    return NextResponse.json({ 
-      authenticated: false 
+  } catch {
+    return NextResponse.json({
+      authenticated: false,
     });
   }
 }
