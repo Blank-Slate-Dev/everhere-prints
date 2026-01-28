@@ -1,9 +1,6 @@
 // src/app/opengraph-image.tsx
 
 import { ImageResponse } from 'next/og';
-import { SITE_CONFIG } from '@/lib/seo/constants';
-
-export const runtime = 'edge';
 
 export const alt = 'EverHere Prints - Personalised Prints That Capture Your Moments';
 export const size = {
